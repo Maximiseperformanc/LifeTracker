@@ -17,7 +17,12 @@ import {
   insertScreenTimeAppSchema,
   insertScreenTimeEntrySchema,
   insertScreenTimeLimitSchema,
-  insertWatchlistItemSchema
+  insertWatchlistItemSchema,
+  insertTodoCategorySchema,
+  insertTodoSchema,
+  insertCalendarEventSchema,
+  insertWeeklyPlanSchema,
+  insertDailyPlanSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -849,6 +854,274 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(csvContent);
     } catch (error) {
       res.status(500).json({ message: "Failed to export watchlist data" });
+    }
+  });
+
+  // Todo Categories
+  app.get("/api/todo-categories", async (req, res) => {
+    try {
+      const categories = await storage.getTodoCategories(DEFAULT_USER_ID);
+      res.json(categories);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch todo categories" });
+    }
+  });
+
+  app.post("/api/todo-categories", async (req, res) => {
+    try {
+      const validatedData = insertTodoCategorySchema.parse(req.body);
+      const category = await storage.createTodoCategory(DEFAULT_USER_ID, validatedData);
+      res.json(category);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid category data" });
+    }
+  });
+
+  app.put("/api/todo-categories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const category = await storage.updateTodoCategory(id, req.body);
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      res.json(category);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update category" });
+    }
+  });
+
+  app.delete("/api/todo-categories/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteTodoCategory(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete category" });
+    }
+  });
+
+  // Todos
+  app.get("/api/todos", async (req, res) => {
+    try {
+      const { categoryId, status, dueDate } = req.query;
+      
+      let todos;
+      if (status) {
+        todos = await storage.getTodosByStatus(DEFAULT_USER_ID, status as string);
+      } else if (dueDate) {
+        todos = await storage.getTodosByDueDate(DEFAULT_USER_ID, dueDate as string);
+      } else {
+        todos = await storage.getTodos(DEFAULT_USER_ID, categoryId as string);
+      }
+      
+      res.json(todos);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch todos" });
+    }
+  });
+
+  app.get("/api/todos/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const todo = await storage.getTodo(id);
+      if (!todo) {
+        return res.status(404).json({ message: "Todo not found" });
+      }
+      res.json(todo);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch todo" });
+    }
+  });
+
+  app.post("/api/todos", async (req, res) => {
+    try {
+      const validatedData = insertTodoSchema.parse(req.body);
+      const todo = await storage.createTodo(DEFAULT_USER_ID, validatedData);
+      res.json(todo);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid todo data" });
+    }
+  });
+
+  app.put("/api/todos/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const todo = await storage.updateTodo(id, req.body);
+      if (!todo) {
+        return res.status(404).json({ message: "Todo not found" });
+      }
+      res.json(todo);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update todo" });
+    }
+  });
+
+  app.delete("/api/todos/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteTodo(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Todo not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete todo" });
+    }
+  });
+
+  // Calendar Events
+  app.get("/api/calendar-events", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const events = await storage.getCalendarEvents(DEFAULT_USER_ID, startDate as string, endDate as string);
+      res.json(events);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch calendar events" });
+    }
+  });
+
+  app.post("/api/calendar-events", async (req, res) => {
+    try {
+      const validatedData = insertCalendarEventSchema.parse(req.body);
+      const event = await storage.createCalendarEvent(DEFAULT_USER_ID, validatedData);
+      res.json(event);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid event data" });
+    }
+  });
+
+  app.put("/api/calendar-events/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const event = await storage.updateCalendarEvent(id, req.body);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      res.json(event);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update event" });
+    }
+  });
+
+  app.delete("/api/calendar-events/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteCalendarEvent(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete event" });
+    }
+  });
+
+  // Weekly Plans
+  app.get("/api/weekly-plans", async (req, res) => {
+    try {
+      const { weekStartDate } = req.query;
+      
+      if (weekStartDate) {
+        const plan = await storage.getWeeklyPlan(DEFAULT_USER_ID, weekStartDate as string);
+        res.json(plan);
+      } else {
+        const plans = await storage.getWeeklyPlans(DEFAULT_USER_ID);
+        res.json(plans);
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch weekly plans" });
+    }
+  });
+
+  app.post("/api/weekly-plans", async (req, res) => {
+    try {
+      const validatedData = insertWeeklyPlanSchema.parse(req.body);
+      const plan = await storage.createWeeklyPlan(DEFAULT_USER_ID, validatedData);
+      res.json(plan);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid weekly plan data" });
+    }
+  });
+
+  app.put("/api/weekly-plans/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const plan = await storage.updateWeeklyPlan(id, req.body);
+      if (!plan) {
+        return res.status(404).json({ message: "Weekly plan not found" });
+      }
+      res.json(plan);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update weekly plan" });
+    }
+  });
+
+  app.delete("/api/weekly-plans/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteWeeklyPlan(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Weekly plan not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete weekly plan" });
+    }
+  });
+
+  // Daily Plans
+  app.get("/api/daily-plans", async (req, res) => {
+    try {
+      const { date, weekStartDate } = req.query;
+      
+      if (date) {
+        const plan = await storage.getDailyPlan(DEFAULT_USER_ID, date as string);
+        res.json(plan);
+      } else {
+        const plans = await storage.getDailyPlans(DEFAULT_USER_ID, weekStartDate as string);
+        res.json(plans);
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch daily plans" });
+    }
+  });
+
+  app.post("/api/daily-plans", async (req, res) => {
+    try {
+      const validatedData = insertDailyPlanSchema.parse(req.body);
+      const plan = await storage.createDailyPlan(DEFAULT_USER_ID, validatedData);
+      res.json(plan);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid daily plan data" });
+    }
+  });
+
+  app.put("/api/daily-plans/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const plan = await storage.updateDailyPlan(id, req.body);
+      if (!plan) {
+        return res.status(404).json({ message: "Daily plan not found" });
+      }
+      res.json(plan);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update daily plan" });
+    }
+  });
+
+  app.delete("/api/daily-plans/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteDailyPlan(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Daily plan not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete daily plan" });
     }
   });
 

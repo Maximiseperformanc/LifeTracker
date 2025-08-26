@@ -32,7 +32,17 @@ import {
   type ScreenTimeLimit,
   type InsertScreenTimeLimit,
   type WatchlistItem,
-  type InsertWatchlistItem
+  type InsertWatchlistItem,
+  type TodoCategory,
+  type InsertTodoCategory,
+  type Todo,
+  type InsertTodo,
+  type CalendarEvent,
+  type InsertCalendarEvent,
+  type WeeklyPlan,
+  type InsertWeeklyPlan,
+  type DailyPlan,
+  type InsertDailyPlan
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -127,6 +137,41 @@ export interface IStorage {
   createWatchlistItem(userId: string, item: InsertWatchlistItem): Promise<WatchlistItem>;
   updateWatchlistItem(id: string, item: Partial<WatchlistItem>): Promise<WatchlistItem | undefined>;
   deleteWatchlistItem(id: string): Promise<boolean>;
+
+  // Todo Categories
+  getTodoCategories(userId: string): Promise<TodoCategory[]>;
+  createTodoCategory(userId: string, category: InsertTodoCategory): Promise<TodoCategory>;
+  updateTodoCategory(id: string, category: Partial<TodoCategory>): Promise<TodoCategory | undefined>;
+  deleteTodoCategory(id: string): Promise<boolean>;
+
+  // Todos
+  getTodos(userId: string, categoryId?: string): Promise<Todo[]>;
+  getTodo(id: string): Promise<Todo | undefined>;
+  createTodo(userId: string, todo: InsertTodo): Promise<Todo>;
+  updateTodo(id: string, todo: Partial<Todo>): Promise<Todo | undefined>;
+  deleteTodo(id: string): Promise<boolean>;
+  getTodosByStatus(userId: string, status: string): Promise<Todo[]>;
+  getTodosByDueDate(userId: string, date: string): Promise<Todo[]>;
+
+  // Calendar Events
+  getCalendarEvents(userId: string, startDate?: string, endDate?: string): Promise<CalendarEvent[]>;
+  createCalendarEvent(userId: string, event: InsertCalendarEvent): Promise<CalendarEvent>;
+  updateCalendarEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent | undefined>;
+  deleteCalendarEvent(id: string): Promise<boolean>;
+
+  // Weekly Plans
+  getWeeklyPlans(userId: string): Promise<WeeklyPlan[]>;
+  getWeeklyPlan(userId: string, weekStartDate: string): Promise<WeeklyPlan | undefined>;
+  createWeeklyPlan(userId: string, plan: InsertWeeklyPlan): Promise<WeeklyPlan>;
+  updateWeeklyPlan(id: string, plan: Partial<WeeklyPlan>): Promise<WeeklyPlan | undefined>;
+  deleteWeeklyPlan(id: string): Promise<boolean>;
+
+  // Daily Plans
+  getDailyPlans(userId: string, weekStartDate?: string): Promise<DailyPlan[]>;
+  getDailyPlan(userId: string, date: string): Promise<DailyPlan | undefined>;
+  createDailyPlan(userId: string, plan: InsertDailyPlan): Promise<DailyPlan>;
+  updateDailyPlan(id: string, plan: Partial<DailyPlan>): Promise<DailyPlan | undefined>;
+  deleteDailyPlan(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -147,6 +192,11 @@ export class MemStorage implements IStorage {
   private screenTimeEntries: Map<string, ScreenTimeEntry>;
   private screenTimeLimits: Map<string, ScreenTimeLimit>;
   private watchlistItems: Map<string, WatchlistItem>;
+  private todoCategories: Map<string, TodoCategory>;
+  private todos: Map<string, Todo>;
+  private calendarEvents: Map<string, CalendarEvent>;
+  private weeklyPlans: Map<string, WeeklyPlan>;
+  private dailyPlans: Map<string, DailyPlan>;
 
   constructor() {
     this.users = new Map();
@@ -166,6 +216,11 @@ export class MemStorage implements IStorage {
     this.screenTimeEntries = new Map();
     this.screenTimeLimits = new Map();
     this.watchlistItems = new Map();
+    this.todoCategories = new Map();
+    this.todos = new Map();
+    this.calendarEvents = new Map();
+    this.weeklyPlans = new Map();
+    this.dailyPlans = new Map();
 
     // Create a default user for demo purposes
     const defaultUser: User = {
@@ -183,6 +238,9 @@ export class MemStorage implements IStorage {
     
     // Seed screen time apps
     this.seedScreenTimeApps();
+    
+    // Seed todo categories
+    this.seedTodoCategories();
   }
 
   // Users
@@ -948,6 +1006,35 @@ export class MemStorage implements IStorage {
     return this.watchlistItems.delete(id);
   }
 
+  private seedTodoCategories() {
+    const defaultCategories = [
+      { name: "Work", color: "#3B82F6", icon: "💼", description: "Professional tasks and projects" },
+      { name: "Personal", color: "#10B981", icon: "🏠", description: "Personal life and family tasks" },
+      { name: "Health", color: "#F59E0B", icon: "💪", description: "Health, fitness, and wellness" },
+      { name: "Learning", color: "#8B5CF6", icon: "📚", description: "Education and skill development" },
+      { name: "Finance", color: "#EF4444", icon: "💰", description: "Money, bills, and financial planning" },
+      { name: "Travel", color: "#06B6D4", icon: "✈️", description: "Trip planning and travel tasks" },
+      { name: "Shopping", color: "#EC4899", icon: "🛒", description: "Shopping lists and purchases" },
+      { name: "Social", color: "#84CC16", icon: "👥", description: "Social events and relationships" }
+    ];
+
+    defaultCategories.forEach((category, index) => {
+      const id = randomUUID();
+      const todoCategory: TodoCategory = {
+        id,
+        userId: "default-user",
+        name: category.name,
+        color: category.color,
+        icon: category.icon,
+        description: category.description,
+        orderIndex: index,
+        isArchived: false,
+        createdAt: new Date()
+      };
+      this.todoCategories.set(id, todoCategory);
+    });
+  }
+
   private seedScreenTimeApps() {
     const commonApps = [
       { name: "Instagram", category: "Social" },
@@ -983,6 +1070,311 @@ export class MemStorage implements IStorage {
       };
       this.screenTimeApps.set(id, screenTimeApp);
     });
+  }
+
+  private seedTodoCategories() {
+    const defaultCategories = [
+      { name: "Work", color: "#3B82F6", icon: "💼", description: "Professional tasks and projects" },
+      { name: "Personal", color: "#10B981", icon: "🏠", description: "Personal life and family tasks" },
+      { name: "Health", color: "#F59E0B", icon: "💪", description: "Health, fitness, and wellness" },
+      { name: "Learning", color: "#8B5CF6", icon: "📚", description: "Education and skill development" },
+      { name: "Finance", color: "#EF4444", icon: "💰", description: "Money, bills, and financial planning" },
+      { name: "Travel", color: "#06B6D4", icon: "✈️", description: "Trip planning and travel tasks" },
+      { name: "Shopping", color: "#EC4899", icon: "🛒", description: "Shopping lists and purchases" },
+      { name: "Social", color: "#84CC16", icon: "👥", description: "Social events and relationships" }
+    ];
+
+    defaultCategories.forEach((category, index) => {
+      const id = randomUUID();
+      const todoCategory: TodoCategory = {
+        id,
+        userId: "default-user",
+        name: category.name,
+        color: category.color,
+        icon: category.icon,
+        description: category.description,
+        orderIndex: index,
+        isArchived: false,
+        createdAt: new Date()
+      };
+      this.todoCategories.set(id, todoCategory);
+    });
+  }
+
+  // Todo Categories methods
+  async getTodoCategories(userId: string): Promise<TodoCategory[]> {
+    return Array.from(this.todoCategories.values())
+      .filter(category => category.userId === userId && !category.isArchived)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+  }
+
+  async createTodoCategory(userId: string, category: InsertTodoCategory): Promise<TodoCategory> {
+    const id = randomUUID();
+    const now = new Date();
+    const newCategory: TodoCategory = {
+      id,
+      userId,
+      name: category.name,
+      color: category.color || "#3B82F6",
+      icon: category.icon || "📝",
+      description: category.description || null,
+      orderIndex: category.orderIndex || 0,
+      isArchived: category.isArchived || false,
+      createdAt: now
+    };
+    this.todoCategories.set(id, newCategory);
+    return newCategory;
+  }
+
+  async updateTodoCategory(id: string, category: Partial<TodoCategory>): Promise<TodoCategory | undefined> {
+    const existingCategory = this.todoCategories.get(id);
+    if (!existingCategory) return undefined;
+    
+    const updatedCategory: TodoCategory = { ...existingCategory, ...category };
+    this.todoCategories.set(id, updatedCategory);
+    return updatedCategory;
+  }
+
+  async deleteTodoCategory(id: string): Promise<boolean> {
+    return this.todoCategories.delete(id);
+  }
+
+  // Todos methods
+  async getTodos(userId: string, categoryId?: string): Promise<Todo[]> {
+    let todos = Array.from(this.todos.values())
+      .filter(todo => todo.userId === userId);
+    
+    if (categoryId) {
+      todos = todos.filter(todo => todo.categoryId === categoryId);
+    }
+    
+    return todos.sort((a, b) => {
+      // Sort by priority (urgent > high > medium > low), then by due date
+      const priorityOrder = { "urgent": 0, "high": 1, "medium": 2, "low": 3 };
+      const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 2;
+      const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 2;
+      
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      
+      // If same priority, sort by due date
+      if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+      if (a.dueDate) return -1;
+      if (b.dueDate) return 1;
+      
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    });
+  }
+
+  async getTodo(id: string): Promise<Todo | undefined> {
+    return this.todos.get(id);
+  }
+
+  async createTodo(userId: string, todo: InsertTodo): Promise<Todo> {
+    const id = randomUUID();
+    const now = new Date();
+    const newTodo: Todo = {
+      id,
+      userId,
+      categoryId: todo.categoryId,
+      title: todo.title,
+      description: todo.description || null,
+      priority: todo.priority || "medium",
+      status: todo.status || "pending",
+      dueDate: todo.dueDate || null,
+      dueTime: todo.dueTime || null,
+      estimatedMinutes: todo.estimatedMinutes || null,
+      tags: todo.tags || null,
+      dependencies: todo.dependencies || null,
+      notes: todo.notes || null,
+      completedAt: null,
+      orderIndex: todo.orderIndex || 0,
+      createdAt: now
+    };
+    this.todos.set(id, newTodo);
+    return newTodo;
+  }
+
+  async updateTodo(id: string, todo: Partial<Todo>): Promise<Todo | undefined> {
+    const existingTodo = this.todos.get(id);
+    if (!existingTodo) return undefined;
+    
+    const updatedTodo: Todo = { ...existingTodo, ...todo };
+    
+    // If status changed to "completed", set completedAt
+    if (todo.status === "completed" && existingTodo.status !== "completed") {
+      updatedTodo.completedAt = new Date();
+    }
+    
+    this.todos.set(id, updatedTodo);
+    return updatedTodo;
+  }
+
+  async deleteTodo(id: string): Promise<boolean> {
+    return this.todos.delete(id);
+  }
+
+  async getTodosByStatus(userId: string, status: string): Promise<Todo[]> {
+    return Array.from(this.todos.values())
+      .filter(todo => todo.userId === userId && todo.status === status);
+  }
+
+  async getTodosByDueDate(userId: string, date: string): Promise<Todo[]> {
+    return Array.from(this.todos.values())
+      .filter(todo => todo.userId === userId && todo.dueDate === date);
+  }
+
+  // Calendar Events methods
+  async getCalendarEvents(userId: string, startDate?: string, endDate?: string): Promise<CalendarEvent[]> {
+    let events = Array.from(this.calendarEvents.values())
+      .filter(event => event.userId === userId);
+    
+    if (startDate && endDate) {
+      events = events.filter(event => {
+        return event.startDate >= startDate && event.startDate <= endDate;
+      });
+    }
+    
+    return events.sort((a, b) => {
+      const dateCompare = a.startDate.localeCompare(b.startDate);
+      if (dateCompare !== 0) return dateCompare;
+      if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime);
+      return 0;
+    });
+  }
+
+  async createCalendarEvent(userId: string, event: InsertCalendarEvent): Promise<CalendarEvent> {
+    const id = randomUUID();
+    const now = new Date();
+    const newEvent: CalendarEvent = {
+      id,
+      userId,
+      title: event.title,
+      description: event.description || null,
+      eventType: event.eventType || "appointment",
+      startDate: event.startDate,
+      startTime: event.startTime || null,
+      endDate: event.endDate || null,
+      endTime: event.endTime || null,
+      location: event.location || null,
+      isAllDay: event.isAllDay || false,
+      isRecurring: event.isRecurring || false,
+      recurringPattern: event.recurringPattern || null,
+      reminder: event.reminder || null,
+      color: event.color || "#3B82F6",
+      createdAt: now
+    };
+    this.calendarEvents.set(id, newEvent);
+    return newEvent;
+  }
+
+  async updateCalendarEvent(id: string, event: Partial<CalendarEvent>): Promise<CalendarEvent | undefined> {
+    const existingEvent = this.calendarEvents.get(id);
+    if (!existingEvent) return undefined;
+    
+    const updatedEvent: CalendarEvent = { ...existingEvent, ...event };
+    this.calendarEvents.set(id, updatedEvent);
+    return updatedEvent;
+  }
+
+  async deleteCalendarEvent(id: string): Promise<boolean> {
+    return this.calendarEvents.delete(id);
+  }
+
+  // Weekly Plans methods
+  async getWeeklyPlans(userId: string): Promise<WeeklyPlan[]> {
+    return Array.from(this.weeklyPlans.values())
+      .filter(plan => plan.userId === userId)
+      .sort((a, b) => b.weekStartDate.localeCompare(a.weekStartDate));
+  }
+
+  async getWeeklyPlan(userId: string, weekStartDate: string): Promise<WeeklyPlan | undefined> {
+    return Array.from(this.weeklyPlans.values())
+      .find(plan => plan.userId === userId && plan.weekStartDate === weekStartDate);
+  }
+
+  async createWeeklyPlan(userId: string, plan: InsertWeeklyPlan): Promise<WeeklyPlan> {
+    const id = randomUUID();
+    const now = new Date();
+    const newPlan: WeeklyPlan = {
+      id,
+      userId,
+      weekStartDate: plan.weekStartDate,
+      title: plan.title,
+      goals: plan.goals || null,
+      priorities: plan.priorities || null,
+      notes: plan.notes || null,
+      reflection: plan.reflection || null,
+      createdAt: now
+    };
+    this.weeklyPlans.set(id, newPlan);
+    return newPlan;
+  }
+
+  async updateWeeklyPlan(id: string, plan: Partial<WeeklyPlan>): Promise<WeeklyPlan | undefined> {
+    const existingPlan = this.weeklyPlans.get(id);
+    if (!existingPlan) return undefined;
+    
+    const updatedPlan: WeeklyPlan = { ...existingPlan, ...plan };
+    this.weeklyPlans.set(id, updatedPlan);
+    return updatedPlan;
+  }
+
+  async deleteWeeklyPlan(id: string): Promise<boolean> {
+    return this.weeklyPlans.delete(id);
+  }
+
+  // Daily Plans methods
+  async getDailyPlans(userId: string, weekStartDate?: string): Promise<DailyPlan[]> {
+    let plans = Array.from(this.dailyPlans.values())
+      .filter(plan => plan.userId === userId);
+    
+    if (weekStartDate) {
+      const weekEnd = new Date(weekStartDate);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      const weekEndStr = weekEnd.toISOString().split('T')[0];
+      
+      plans = plans.filter(plan => plan.date >= weekStartDate && plan.date <= weekEndStr);
+    }
+    
+    return plans.sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  async getDailyPlan(userId: string, date: string): Promise<DailyPlan | undefined> {
+    return Array.from(this.dailyPlans.values())
+      .find(plan => plan.userId === userId && plan.date === date);
+  }
+
+  async createDailyPlan(userId: string, plan: InsertDailyPlan): Promise<DailyPlan> {
+    const id = randomUUID();
+    const now = new Date();
+    const newPlan: DailyPlan = {
+      id,
+      userId,
+      weeklyPlanId: plan.weeklyPlanId || null,
+      date: plan.date,
+      title: plan.title,
+      timeBlocks: plan.timeBlocks || null,
+      priorities: plan.priorities || null,
+      reflection: plan.reflection || null,
+      energyLevel: plan.energyLevel || null,
+      moodRating: plan.moodRating || null,
+      createdAt: now
+    };
+    this.dailyPlans.set(id, newPlan);
+    return newPlan;
+  }
+
+  async updateDailyPlan(id: string, plan: Partial<DailyPlan>): Promise<DailyPlan | undefined> {
+    const existingPlan = this.dailyPlans.get(id);
+    if (!existingPlan) return undefined;
+    
+    const updatedPlan: DailyPlan = { ...existingPlan, ...plan };
+    this.dailyPlans.set(id, updatedPlan);
+    return updatedPlan;
+  }
+
+  async deleteDailyPlan(id: string): Promise<boolean> {
+    return this.dailyPlans.delete(id);
   }
 }
 

@@ -368,6 +368,21 @@ export type Set = typeof sets.$inferSelect;
 export type InsertCardioEntry = z.infer<typeof insertCardioEntrySchema>;
 export type CardioEntry = typeof cardioEntries.$inferSelect;
 
+export type InsertTodoCategory = z.infer<typeof insertTodoCategorySchema>;
+export type TodoCategory = typeof todoCategories.$inferSelect;
+
+export type InsertTodo = z.infer<typeof insertTodoSchema>;
+export type Todo = typeof todos.$inferSelect;
+
+export type InsertCalendarEvent = z.infer<typeof insertCalendarEventSchema>;
+export type CalendarEvent = typeof calendarEvents.$inferSelect;
+
+export type InsertWeeklyPlan = z.infer<typeof insertWeeklyPlanSchema>;
+export type WeeklyPlan = typeof weeklyPlans.$inferSelect;
+
+export type InsertDailyPlan = z.infer<typeof insertDailyPlanSchema>;
+export type DailyPlan = typeof dailyPlans.$inferSelect;
+
 export type InsertScreenTimeApp = z.infer<typeof insertScreenTimeAppSchema>;
 export type ScreenTimeApp = typeof screenTimeApps.$inferSelect;
 
@@ -379,3 +394,143 @@ export type ScreenTimeLimit = typeof screenTimeLimits.$inferSelect;
 
 export type InsertWatchlistItem = z.infer<typeof insertWatchlistItemSchema>;
 export type WatchlistItem = typeof watchlistItems.$inferSelect;
+
+// To Do System Tables
+export const todoCategories = pgTable("todo_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  name: text("name").notNull(),
+  color: text("color").default("#3B82F6"),
+  icon: text("icon").default("📝"),
+  description: text("description"),
+  orderIndex: integer("order_index").default(0),
+  isArchived: boolean("is_archived").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const todos = pgTable("todos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  categoryId: varchar("category_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
+  status: text("status").notNull().default("pending"), // pending, in_progress, completed, cancelled
+  dueDate: text("due_date"), // YYYY-MM-DD format
+  dueTime: text("due_time"), // HH:MM format
+  estimatedMinutes: integer("estimated_minutes"),
+  tags: text("tags").array(),
+  dependencies: text("dependencies").array(), // Array of todo IDs this depends on
+  notes: text("notes"),
+  completedAt: timestamp("completed_at"),
+  orderIndex: integer("order_index").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Calendar/Events Tables
+export const calendarEvents = pgTable("calendar_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  eventType: text("event_type").notNull().default("appointment"), // appointment, work, personal, deadline, meeting
+  startDate: text("start_date").notNull(), // YYYY-MM-DD format
+  startTime: text("start_time"), // HH:MM format
+  endDate: text("end_date"), // YYYY-MM-DD format
+  endTime: text("end_time"), // HH:MM format
+  location: text("location"),
+  isAllDay: boolean("is_all_day").default(false),
+  isRecurring: boolean("is_recurring").default(false),
+  recurringPattern: text("recurring_pattern"), // daily, weekly, monthly, yearly
+  reminder: integer("reminder_minutes"), // minutes before event
+  color: text("color").default("#3B82F6"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Planning Tables
+export const weeklyPlans = pgTable("weekly_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  weekStartDate: text("week_start_date").notNull(), // YYYY-MM-DD format (Monday)
+  title: text("title").notNull(),
+  goals: jsonb("goals").$type<Array<{
+    id: string;
+    text: string;
+    completed: boolean;
+    category: string;
+  }>>(),
+  priorities: jsonb("priorities").$type<Array<{
+    id: string;
+    text: string;
+    category: string;
+    completed: boolean;
+  }>>(),
+  notes: text("notes"),
+  reflection: text("reflection"), // For completed weeks
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const dailyPlans = pgTable("daily_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  weeklyPlanId: varchar("weekly_plan_id"),
+  date: text("date").notNull(), // YYYY-MM-DD format
+  title: text("title").notNull(),
+  timeBlocks: jsonb("time_blocks").$type<Array<{
+    id: string;
+    startTime: string; // HH:MM
+    endTime: string; // HH:MM
+    title: string;
+    type: string; // work, personal, break, todo, habit
+    todoId?: string;
+    habitId?: string;
+    completed: boolean;
+  }>>(),
+  priorities: jsonb("priorities").$type<Array<{
+    id: string;
+    text: string;
+    completed: boolean;
+    todoId?: string;
+  }>>(),
+  reflection: text("reflection"),
+  energyLevel: integer("energy_level"), // 1-10
+  moodRating: integer("mood_rating"), // 1-10
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Insert schemas for new tables
+export const insertTodoCategorySchema = createInsertSchema(todoCategories).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
+export const insertTodoSchema = createInsertSchema(todos).omit({
+  id: true,
+  userId: true,
+  completedAt: true,
+  createdAt: true,
+}).extend({
+  priority: z.enum(["low", "medium", "high", "urgent"]),
+  status: z.enum(["pending", "in_progress", "completed", "cancelled"]),
+});
+
+export const insertCalendarEventSchema = createInsertSchema(calendarEvents).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+}).extend({
+  eventType: z.enum(["appointment", "work", "personal", "deadline", "meeting"]),
+});
+
+export const insertWeeklyPlanSchema = createInsertSchema(weeklyPlans).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
+export const insertDailyPlanSchema = createInsertSchema(dailyPlans).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});

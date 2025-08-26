@@ -22,14 +22,10 @@ import { Button } from "@/components/ui/button";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
-  { name: "Timer", href: "/timer", icon: Clock },
-  { name: "Habits", href: "/habits", icon: CheckSquare },
-  { name: "Health", href: "/health", icon: Heart },
-  { name: "Nutrition", href: "/nutrition", icon: Apple },
-  { name: "Workout", href: "/workout", icon: Dumbbell },
-  { name: "Content", href: "/content", icon: Smartphone },
-  { name: "Goals", href: "/goals", icon: Target },
+  { name: "To Do", href: "/todos", icon: CheckSquare },
   { name: "Calendar", href: "/calendar", icon: Calendar },
+  { name: "Systems", href: "/systems", icon: TrendingUp },
+  { name: "Timer", href: "/timer", icon: Clock },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
 

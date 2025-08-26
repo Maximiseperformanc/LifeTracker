@@ -1,202 +1,463 @@
 import { useState } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import Sidebar from "@/components/layout/sidebar";
-import MobileSidebar from "@/components/layout/mobile-sidebar";
-import StatCard from "@/components/dashboard/stat-card";
-import TimerSection from "@/components/dashboard/timer-section";
-import HabitsSection from "@/components/dashboard/habits-section";
-import ProgressChart from "@/components/dashboard/progress-chart";
-import HealthMetrics from "@/components/dashboard/health-metrics";
-import GoalsSection from "@/components/dashboard/goals-section";
-import InsightsSection from "@/components/dashboard/insights-section";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Menu, Download, Bell, Settings } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { 
+  CheckSquare, Calendar, TrendingUp, Target, Clock, 
+  Plus, ArrowRight, Star, AlertCircle, ChevronRight,
+  CalendarDays, ListTodo, Activity, Circle
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import type { Habit, HabitEntry, Goal, HealthEntry, TimerSession } from "@shared/schema";
+import { Link } from "wouter";
+import { format, isToday, isTomorrow } from "date-fns";
+import type { Todo, TodoCategory, CalendarEvent, Habit, HabitEntry } from "@shared/schema";
 
 export default function Dashboard() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isMobile = useIsMobile();
+  const today = format(new Date(), "yyyy-MM-dd");
+  const tomorrow = format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd");
 
-  const today = new Date().toISOString().split('T')[0];
-
-  // Fetch data
-  const { data: habits = [] } = useQuery<Habit[]>({
-    queryKey: ['/api/habits']
+  // Fetch data for all sections
+  const { data: todos = [] } = useQuery({
+    queryKey: ["/api/todos"],
   });
 
-  const { data: todayHabitEntries = [] } = useQuery<HabitEntry[]>({
-    queryKey: ['/api/habit-entries', today],
+  const { data: todoCategories = [] } = useQuery({
+    queryKey: ["/api/todo-categories"],
+  });
+
+  const { data: events = [] } = useQuery({
+    queryKey: ["/api/calendar-events"],
+  });
+
+  const { data: habits = [] } = useQuery({
+    queryKey: ["/api/habits"],
+  });
+
+  const { data: todayHabitEntries = [] } = useQuery({
+    queryKey: ["/api/habit-entries", { date: today }],
     queryFn: () => fetch(`/api/habit-entries?date=${today}`).then(res => res.json())
   });
 
-  const { data: goals = [] } = useQuery<Goal[]>({
-    queryKey: ['/api/goals']
-  });
+  // Calculate stats for each section
+  const todayTodos = todos.filter((todo: Todo) => todo.dueDate === today);
+  const overdueTodos = todos.filter((todo: Todo) => 
+    todo.dueDate && todo.dueDate < today && todo.status !== "completed"
+  );
+  const completedTodos = todos.filter((todo: Todo) => todo.status === "completed").length;
+  const pendingTodos = todos.filter((todo: Todo) => todo.status === "pending").length;
 
-  const { data: healthEntries = [] } = useQuery<HealthEntry[]>({
-    queryKey: ['/api/health-entries']
-  });
+  const todayEvents = events.filter((event: CalendarEvent) => event.startDate === today);
+  const tomorrowEvents = events.filter((event: CalendarEvent) => event.startDate === tomorrow);
+  const upcomingEvents = events.filter((event: CalendarEvent) => event.startDate > today).length;
 
-  const { data: todayTimerSessions = [] } = useQuery<TimerSession[]>({
-    queryKey: ['/api/timer-sessions', today],
-    queryFn: () => fetch(`/api/timer-sessions?date=${today}`).then(res => res.json())
-  });
-
-  // Calculate stats
-  const completedHabits = todayHabitEntries.filter(entry => entry.completed).length;
-  const totalHabits = habits.length;
-  const habitCompletionRate = totalHabits > 0 ? Math.round((completedHabits / totalHabits) * 100) : 0;
-  
-  const totalFocusMinutes = todayTimerSessions
-    .filter(session => session.completed)
-    .reduce((sum, session) => sum + session.duration, 0);
-  
-  const focusTimeFormatted = `${Math.floor(totalFocusMinutes / 60)}h ${totalFocusMinutes % 60}m`;
-  
-  const todayHealth = healthEntries.find(entry => entry.date === today);
-  const sleepQuality = todayHealth?.sleepQuality ? `${todayHealth.sleepQuality}/10` : "No data";
-  
-  const goalsOnTrack = goals.filter(goal => (goal.progress || 0) >= 50).length;
-  const avgGoalProgress = goals.length > 0 
-    ? Math.round(goals.reduce((sum, goal) => sum + (goal.progress || 0), 0) / goals.length) 
+  const activeHabits = habits.filter((habit: Habit) => habit.isActive);
+  const completedHabitsToday = todayHabitEntries.filter((entry: HabitEntry) => {
+    const habit = habits.find((h: Habit) => h.id === entry.habitId);
+    return habit && entry.value >= habit.target;
+  }).length;
+  const habitCompletionRate = activeHabits.length > 0 
+    ? Math.round((completedHabitsToday / activeHabits.length) * 100) 
     : 0;
 
-  const handleExportData = async () => {
-    try {
-      const response = await fetch('/api/export');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'lifetrack-data.json';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (error) {
-      console.error('Failed to export data:', error);
-    }
-  };
-
   return (
-    <div className="flex h-screen bg-background">
-      {/* Desktop Sidebar */}
-      {!isMobile && <Sidebar />}
+    <div className="p-6 space-y-8" data-testid="dashboard">
+      {/* Header */}
+      <div>
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">LifeTrack Pro</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">
+          Your comprehensive personal development dashboard
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+          {format(new Date(), "EEEE, MMMM dd, yyyy")}
+        </p>
+      </div>
 
-      {/* Mobile Sidebar */}
-      {isMobile && (
-        <MobileSidebar 
-          open={mobileMenuOpen} 
-          onOpenChange={setMobileMenuOpen} 
-        />
-      )}
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="bg-surface border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              {isMobile && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setMobileMenuOpen(true)}
-                  data-testid="button-mobile-menu"
-                >
-                  <Menu className="h-5 w-5" />
-                </Button>
-              )}
-              <div>
-                <h2 className="text-2xl font-semibold text-gray-900">Dashboard</h2>
-                <p className="text-gray-600">Track your daily progress and achievements</p>
+      {/* Quick Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <CheckSquare className="h-8 w-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Todos</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{todos.length}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <Button 
-                onClick={handleExportData}
-                className="bg-primary text-white hover:bg-blue-700"
-                data-testid="button-export-data"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export Data
-              </Button>
-              <Button variant="ghost" size="icon" data-testid="button-notifications">
-                <Bell className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" data-testid="button-settings">
-                <Settings className="h-5 w-5" />
-              </Button>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Calendar className="h-8 w-8 text-green-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Events</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{events.length}</p>
+              </div>
             </div>
-          </div>
-        </header>
+          </CardContent>
+        </Card>
 
-        {/* Dashboard Content */}
-        <main className="flex-1 overflow-y-auto p-6">
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatCard
-              title="Focus Time Today"
-              value={focusTimeFormatted}
-              change="+12% from yesterday"
-              icon="clock"
-              trend="up"
-              data-testid="stat-focus-time"
-            />
-            <StatCard
-              title="Habits Completed"
-              value={`${completedHabits}/${totalHabits}`}
-              change={`${habitCompletionRate}% completion rate`}
-              icon="check"
-              trend="up"
-              data-testid="stat-habits"
-            />
-            <StatCard
-              title="Sleep Quality"
-              value={sleepQuality}
-              change={todayHealth?.sleepHours ? `${todayHealth.sleepHours}h last night` : "No data"}
-              icon="moon"
-              trend="up"
-              data-testid="stat-sleep"
-            />
-            <StatCard
-              title="Weekly Goal Progress"
-              value={`${avgGoalProgress}%`}
-              change={`${goalsOnTrack}/${goals.length} goals on track`}
-              icon="target"
-              trend="neutral"
-              data-testid="stat-goals"
-            />
-          </div>
-
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <div className="lg:col-span-1">
-              <TimerSection sessions={todayTimerSessions} />
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <TrendingUp className="h-8 w-8 text-purple-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Systems</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{activeHabits.length}</p>
+              </div>
             </div>
-            <div className="lg:col-span-2">
-              <HabitsSection habits={habits} todayEntries={todayHabitEntries} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Target className="h-8 w-8 text-orange-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Completion Rate</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{habitCompletionRate}%</p>
+              </div>
             </div>
-          </div>
-
-          {/* Charts and Analytics */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <ProgressChart />
-            <HealthMetrics healthEntries={healthEntries} />
-          </div>
-
-          {/* Goals and Insights */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <GoalsSection goals={goals} />
-            <InsightsSection 
-              habits={habits}
-              goals={goals}
-              healthEntries={healthEntries}
-            />
-          </div>
-        </main>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Main 3 Sections */}
+      <div className="grid gap-8 lg:grid-cols-3">
+        {/* To Do Section */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <CheckSquare className="h-5 w-5 text-blue-600" />
+              To Do
+            </CardTitle>
+            <Link href="/todos">
+              <Button variant="outline" size="sm" data-testid="link-todos">
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <p className="text-2xl font-bold text-blue-600">{completedTodos}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Completed</p>
+              </div>
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{pendingTodos}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Pending</p>
+              </div>
+            </div>
+
+            {/* Categories */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Categories</h4>
+              <div className="space-y-2">
+                {todoCategories.slice(0, 3).map((category: TodoCategory) => {
+                  const categoryTodos = todos.filter((todo: Todo) => todo.categoryId === category.id);
+                  const completedInCategory = categoryTodos.filter((todo: Todo) => todo.status === "completed").length;
+                  
+                  return (
+                    <div key={category.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                      <div className="flex items-center gap-2">
+                        <span style={{ color: category.color }}>{category.icon}</span>
+                        <span className="text-sm font-medium">{category.name}</span>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        {completedInCategory}/{categoryTodos.length}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Today's Todos */}
+            {todayTodos.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Due Today</h4>
+                <div className="space-y-2">
+                  {todayTodos.slice(0, 3).map((todo: Todo) => (
+                    <div key={todo.id} className="flex items-center gap-2 p-2 border rounded">
+                      <Circle className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-900 dark:text-white truncate">{todo.title}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {todo.priority}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Overdue Alert */}
+            {overdueTodos.length > 0 && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium text-red-800 dark:text-red-400">
+                    {overdueTodos.length} overdue tasks
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <Link href="/todos">
+              <Button className="w-full" variant="outline" data-testid="button-view-todos">
+                <ListTodo className="h-4 w-4 mr-2" />
+                View All Todos
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Calendar Section */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-green-600" />
+              Calendar
+            </CardTitle>
+            <Link href="/calendar">
+              <Button variant="outline" size="sm" data-testid="link-calendar">
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                <p className="text-2xl font-bold text-green-600">{todayEvents.length}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Today</p>
+              </div>
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{upcomingEvents}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Upcoming</p>
+              </div>
+            </div>
+
+            {/* Today's Events */}
+            {todayEvents.length > 0 ? (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Today's Schedule</h4>
+                <div className="space-y-2">
+                  {todayEvents.slice(0, 3).map((event: CalendarEvent) => (
+                    <div key={event.id} className="flex items-center gap-2 p-2 border rounded">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{event.title}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {event.startTime || "All day"}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">
+                        {event.eventType}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <CalendarDays className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">No events today</p>
+              </div>
+            )}
+
+            {/* Tomorrow Preview */}
+            {tomorrowEvents.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Tomorrow</h4>
+                <div className="space-y-1">
+                  {tomorrowEvents.slice(0, 2).map((event: CalendarEvent) => (
+                    <div key={event.id} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                      <span className="text-sm text-gray-900 dark:text-white truncate">{event.title}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {event.startTime || "All day"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Link href="/calendar">
+              <Button className="w-full" variant="outline" data-testid="button-view-calendar">
+                <Calendar className="h-4 w-4 mr-2" />
+                View Full Calendar
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Systems Section */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-purple-600" />
+              Systems
+            </CardTitle>
+            <Link href="/systems">
+              <Button variant="outline" size="sm" data-testid="link-systems">
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                <p className="text-2xl font-bold text-purple-600">{completedHabitsToday}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Completed</p>
+              </div>
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{habitCompletionRate}%</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Rate</p>
+              </div>
+            </div>
+
+            {/* Today's Systems */}
+            {activeHabits.length > 0 ? (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Today's Systems</h4>
+                <div className="space-y-2">
+                  {activeHabits.slice(0, 4).map((habit: Habit) => {
+                    const todayEntry = todayHabitEntries.find((entry: HabitEntry) => entry.habitId === habit.id);
+                    const progress = todayEntry?.value || 0;
+                    const isCompleted = progress >= (habit.targetValue || 1);
+                    
+                    return (
+                      <div key={habit.id} className="flex items-center gap-2 p-2 border rounded">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{habit.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
+                              <div 
+                                className="bg-purple-600 h-1.5 rounded-full transition-all"
+                                style={{ width: `${Math.min((progress / (habit.targetValue || 1)) * 100, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                              {progress}/{habit.targetValue || 1}
+                            </span>
+                          </div>
+                        </div>
+                        {isCompleted && (
+                          <CheckSquare className="h-4 w-4 text-green-600" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600 dark:text-gray-400">No active systems</p>
+              </div>
+            )}
+
+            {/* Categories */}
+            {habits.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Categories</h4>
+                <div className="flex flex-wrap gap-2">
+                  {[...new Set(habits.map((h: Habit) => h.category))].slice(0, 3).map((category) => (
+                    <Badge key={category} variant="secondary" className="text-xs">
+                      {category}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <Link href="/systems">
+              <Button className="w-full" variant="outline" data-testid="button-view-systems">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                View All Systems
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Planning Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-orange-600" />
+            Planning & Organization
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-2">
+            <Link href="/weekly-plan">
+              <Card className="border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-600 transition-colors cursor-pointer">
+                <CardContent className="p-6 text-center">
+                  <Calendar className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+                  <h3 className="font-medium text-gray-900 dark:text-white">Weekly Planning</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Set goals and priorities for the week
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+
+            <Link href="/daily-plan">
+              <Card className="border-2 border-dashed border-gray-200 dark:border-gray-700 hover:border-orange-300 dark:hover:border-orange-600 transition-colors cursor-pointer">
+                <CardContent className="p-6 text-center">
+                  <Clock className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+                  <h3 className="font-medium text-gray-900 dark:text-white">Daily Planning</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Structure your day with time blocks
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <Link href="/todos">
+              <Button className="w-full" variant="outline" data-testid="button-quick-todo">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Todo
+              </Button>
+            </Link>
+            
+            <Link href="/calendar">
+              <Button className="w-full" variant="outline" data-testid="button-quick-event">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Event
+              </Button>
+            </Link>
+            
+            <Link href="/systems">
+              <Button className="w-full" variant="outline" data-testid="button-quick-system">
+                <Plus className="h-4 w-4 mr-2" />
+                Add System
+              </Button>
+            </Link>
+            
+            <Link href="/timer">
+              <Button className="w-full" variant="outline" data-testid="button-quick-timer">
+                <Clock className="h-4 w-4 mr-2" />
+                Start Timer
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
