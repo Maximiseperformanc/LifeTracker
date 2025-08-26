@@ -17,43 +17,43 @@ export default function Dashboard() {
   const tomorrow = format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd");
 
   // Fetch data for all sections
-  const { data: todos = [] } = useQuery({
+  const { data: todos = [] } = useQuery<Todo[]>({
     queryKey: ["/api/todos"],
   });
 
-  const { data: todoCategories = [] } = useQuery({
+  const { data: todoCategories = [] } = useQuery<TodoCategory[]>({
     queryKey: ["/api/todo-categories"],
   });
 
-  const { data: events = [] } = useQuery({
+  const { data: events = [] } = useQuery<CalendarEvent[]>({
     queryKey: ["/api/calendar-events"],
   });
 
-  const { data: habits = [] } = useQuery({
+  const { data: habits = [] } = useQuery<Habit[]>({
     queryKey: ["/api/habits"],
   });
 
-  const { data: todayHabitEntries = [] } = useQuery({
+  const { data: todayHabitEntries = [] } = useQuery<HabitEntry[]>({
     queryKey: ["/api/habit-entries", { date: today }],
     queryFn: () => fetch(`/api/habit-entries?date=${today}`).then(res => res.json())
   });
 
   // Calculate stats for each section
-  const todayTodos = todos.filter((todo: Todo) => todo.dueDate === today);
-  const overdueTodos = todos.filter((todo: Todo) => 
+  const todayTodos = todos.filter(todo => todo.dueDate === today);
+  const overdueTodos = todos.filter(todo => 
     todo.dueDate && todo.dueDate < today && todo.status !== "completed"
   );
-  const completedTodos = todos.filter((todo: Todo) => todo.status === "completed").length;
-  const pendingTodos = todos.filter((todo: Todo) => todo.status === "pending").length;
+  const completedTodos = todos.filter(todo => todo.status === "completed").length;
+  const pendingTodos = todos.filter(todo => todo.status === "pending").length;
 
-  const todayEvents = events.filter((event: CalendarEvent) => event.startDate === today);
-  const tomorrowEvents = events.filter((event: CalendarEvent) => event.startDate === tomorrow);
-  const upcomingEvents = events.filter((event: CalendarEvent) => event.startDate > today).length;
+  const todayEvents = events.filter(event => event.startDate === today);
+  const tomorrowEvents = events.filter(event => event.startDate === tomorrow);
+  const upcomingEvents = events.filter(event => event.startDate > today).length;
 
-  const activeHabits = habits.filter((habit: Habit) => habit.isActive);
-  const completedHabitsToday = todayHabitEntries.filter((entry: HabitEntry) => {
-    const habit = habits.find((h: Habit) => h.id === entry.habitId);
-    return habit && entry.value >= habit.target;
+  const activeHabits = habits.filter(habit => !habit.isArchived);
+  const completedHabitsToday = todayHabitEntries.filter(entry => {
+    const habit = habits.find(h => h.id === entry.habitId);
+    return habit && (entry.value || 0) >= (habit.targetValue || 1);
   }).length;
   const habitCompletionRate = activeHabits.length > 0 
     ? Math.round((completedHabitsToday / activeHabits.length) * 100) 
@@ -155,14 +155,14 @@ export default function Dashboard() {
             <div>
               <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Categories</h4>
               <div className="space-y-2">
-                {todoCategories.slice(0, 3).map((category: TodoCategory) => {
-                  const categoryTodos = todos.filter((todo: Todo) => todo.categoryId === category.id);
-                  const completedInCategory = categoryTodos.filter((todo: Todo) => todo.status === "completed").length;
+                {todoCategories.slice(0, 3).map(category => {
+                  const categoryTodos = todos.filter(todo => todo.categoryId === category.id);
+                  const completedInCategory = categoryTodos.filter(todo => todo.status === "completed").length;
                   
                   return (
                     <div key={category.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
                       <div className="flex items-center gap-2">
-                        <span style={{ color: category.color }}>{category.icon}</span>
+                        <span style={{ color: category.color || "#3B82F6" }}>{category.icon}</span>
                         <span className="text-sm font-medium">{category.name}</span>
                       </div>
                       <Badge variant="secondary" className="text-xs">
@@ -179,7 +179,7 @@ export default function Dashboard() {
               <div>
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Due Today</h4>
                 <div className="space-y-2">
-                  {todayTodos.slice(0, 3).map((todo: Todo) => (
+                  {todayTodos.slice(0, 3).map(todo => (
                     <div key={todo.id} className="flex items-center gap-2 p-2 border rounded">
                       <Circle className="h-4 w-4 text-gray-400" />
                       <span className="text-sm text-gray-900 dark:text-white truncate">{todo.title}</span>
@@ -244,7 +244,7 @@ export default function Dashboard() {
               <div>
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Today's Schedule</h4>
                 <div className="space-y-2">
-                  {todayEvents.slice(0, 3).map((event: CalendarEvent) => (
+                  {todayEvents.slice(0, 3).map(event => (
                     <div key={event.id} className="flex items-center gap-2 p-2 border rounded">
                       <Clock className="h-4 w-4 text-gray-400" />
                       <div className="flex-1 min-w-0">
@@ -272,7 +272,7 @@ export default function Dashboard() {
               <div>
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Tomorrow</h4>
                 <div className="space-y-1">
-                  {tomorrowEvents.slice(0, 2).map((event: CalendarEvent) => (
+                  {tomorrowEvents.slice(0, 2).map(event => (
                     <div key={event.id} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded">
                       <span className="text-sm text-gray-900 dark:text-white truncate">{event.title}</span>
                       <Badge variant="outline" className="text-xs">
@@ -324,8 +324,8 @@ export default function Dashboard() {
               <div>
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Today's Systems</h4>
                 <div className="space-y-2">
-                  {activeHabits.slice(0, 4).map((habit: Habit) => {
-                    const todayEntry = todayHabitEntries.find((entry: HabitEntry) => entry.habitId === habit.id);
+                  {activeHabits.slice(0, 4).map(habit => {
+                    const todayEntry = todayHabitEntries.find(entry => entry.habitId === habit.id);
                     const progress = todayEntry?.value || 0;
                     const isCompleted = progress >= (habit.targetValue || 1);
                     
@@ -365,7 +365,7 @@ export default function Dashboard() {
               <div>
                 <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">Categories</h4>
                 <div className="flex flex-wrap gap-2">
-                  {[...new Set(habits.map((h: Habit) => h.category))].slice(0, 3).map((category) => (
+                  {[...new Set(habits.map(h => h.category).filter(Boolean))].slice(0, 3).map(category => (
                     <Badge key={category} variant="secondary" className="text-xs">
                       {category}
                     </Badge>

@@ -16,7 +16,7 @@ export function useTimer({ duration, onComplete }: UseTimerOptions) {
 
   const saveSessionMutation = useMutation({
     mutationFn: async (data: { duration: number; type: string; completed: boolean }) => {
-      return apiRequest("POST", "/api/timer-sessions", { ...data, date: today });
+      return apiRequest("/api/timer-sessions", "POST", { ...data, date: today });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/timer-sessions'] });
