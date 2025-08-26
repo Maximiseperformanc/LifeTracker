@@ -9,6 +9,9 @@ import HabitsPage from "@/pages/habits";
 import HealthPage from "@/pages/health";
 import NutritionPage from "@/pages/nutrition";
 import WorkoutPage from "@/pages/workout";
+import ContentPage from "@/pages/content";
+import ScreenTimePage from "@/pages/screen-time";
+import WatchlistPage from "@/pages/watchlist";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -20,6 +23,9 @@ function Router() {
       <Route path="/health" component={HealthPage} />
       <Route path="/nutrition" component={NutritionPage} />
       <Route path="/workout" component={WorkoutPage} />
+      <Route path="/content" component={ContentPage} />
+      <Route path="/content/screen-time" component={ScreenTimePage} />
+      <Route path="/content/watchlist" component={WatchlistPage} />
       <Route component={NotFound} />
     </Switch>
   );

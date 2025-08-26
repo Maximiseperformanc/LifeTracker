@@ -24,7 +24,15 @@ import {
   type Set,
   type InsertSet,
   type CardioEntry,
-  type InsertCardioEntry
+  type InsertCardioEntry,
+  type ScreenTimeApp,
+  type InsertScreenTimeApp,
+  type ScreenTimeEntry,
+  type InsertScreenTimeEntry,
+  type ScreenTimeLimit,
+  type InsertScreenTimeLimit,
+  type WatchlistItem,
+  type InsertWatchlistItem
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -97,6 +105,28 @@ export interface IStorage {
   // Cardio
   getCardioEntries(userId: string, date?: string): Promise<CardioEntry[]>;
   createCardioEntry(userId: string, entry: InsertCardioEntry): Promise<CardioEntry>;
+
+  // Screen Time Apps
+  getScreenTimeApps(): Promise<ScreenTimeApp[]>;
+  createScreenTimeApp(app: InsertScreenTimeApp): Promise<ScreenTimeApp>;
+  updateScreenTimeApp(id: string, app: Partial<ScreenTimeApp>): Promise<ScreenTimeApp | undefined>;
+
+  // Screen Time Entries
+  getScreenTimeEntries(userId: string, date?: string): Promise<ScreenTimeEntry[]>;
+  createScreenTimeEntry(userId: string, entry: InsertScreenTimeEntry): Promise<ScreenTimeEntry>;
+  getScreenTimeEntriesByWeek(userId: string, startDate: string): Promise<ScreenTimeEntry[]>;
+
+  // Screen Time Limits
+  getScreenTimeLimits(userId: string): Promise<ScreenTimeLimit[]>;
+  createScreenTimeLimit(userId: string, limit: InsertScreenTimeLimit): Promise<ScreenTimeLimit>;
+  updateScreenTimeLimit(id: string, limit: Partial<ScreenTimeLimit>): Promise<ScreenTimeLimit | undefined>;
+  deleteScreenTimeLimit(id: string): Promise<boolean>;
+
+  // Watchlist
+  getWatchlistItems(userId: string): Promise<WatchlistItem[]>;
+  createWatchlistItem(userId: string, item: InsertWatchlistItem): Promise<WatchlistItem>;
+  updateWatchlistItem(id: string, item: Partial<WatchlistItem>): Promise<WatchlistItem | undefined>;
+  deleteWatchlistItem(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -113,6 +143,10 @@ export class MemStorage implements IStorage {
   private workouts: Map<string, Workout>;
   private sets: Map<string, Set>;
   private cardioEntries: Map<string, CardioEntry>;
+  private screenTimeApps: Map<string, ScreenTimeApp>;
+  private screenTimeEntries: Map<string, ScreenTimeEntry>;
+  private screenTimeLimits: Map<string, ScreenTimeLimit>;
+  private watchlistItems: Map<string, WatchlistItem>;
 
   constructor() {
     this.users = new Map();
@@ -128,6 +162,10 @@ export class MemStorage implements IStorage {
     this.workouts = new Map();
     this.sets = new Map();
     this.cardioEntries = new Map();
+    this.screenTimeApps = new Map();
+    this.screenTimeEntries = new Map();
+    this.screenTimeLimits = new Map();
+    this.watchlistItems = new Map();
 
     // Create a default user for demo purposes
     const defaultUser: User = {
@@ -142,6 +180,9 @@ export class MemStorage implements IStorage {
     
     // Seed basic exercises
     this.seedExerciseDatabase();
+    
+    // Seed screen time apps
+    this.seedScreenTimeApps();
   }
 
   // Users
@@ -756,6 +797,192 @@ export class MemStorage implements IStorage {
     };
     this.cardioEntries.set(id, newEntry);
     return newEntry;
+  }
+
+  // Screen Time Apps methods
+  async getScreenTimeApps(): Promise<ScreenTimeApp[]> {
+    return Array.from(this.screenTimeApps.values()).filter(app => !app.isExcluded);
+  }
+
+  async createScreenTimeApp(app: InsertScreenTimeApp): Promise<ScreenTimeApp> {
+    const id = randomUUID();
+    const now = new Date();
+    const newApp: ScreenTimeApp = {
+      id,
+      name: app.name,
+      category: app.category || "Other",
+      isExcluded: app.isExcluded || false,
+      createdAt: now
+    };
+    this.screenTimeApps.set(id, newApp);
+    return newApp;
+  }
+
+  async updateScreenTimeApp(id: string, app: Partial<ScreenTimeApp>): Promise<ScreenTimeApp | undefined> {
+    const existingApp = this.screenTimeApps.get(id);
+    if (!existingApp) return undefined;
+    
+    const updatedApp: ScreenTimeApp = { ...existingApp, ...app };
+    this.screenTimeApps.set(id, updatedApp);
+    return updatedApp;
+  }
+
+  // Screen Time Entries methods
+  async getScreenTimeEntries(userId: string, date?: string): Promise<ScreenTimeEntry[]> {
+    let entries = Array.from(this.screenTimeEntries.values())
+      .filter(entry => entry.userId === userId);
+    
+    if (date) {
+      entries = entries.filter(entry => entry.date === date);
+    }
+    
+    return entries.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }
+
+  async createScreenTimeEntry(userId: string, entry: InsertScreenTimeEntry): Promise<ScreenTimeEntry> {
+    const id = randomUUID();
+    const now = new Date();
+    const newEntry: ScreenTimeEntry = {
+      id,
+      userId,
+      appId: entry.appId,
+      date: entry.date,
+      minutes: entry.minutes,
+      createdAt: now
+    };
+    this.screenTimeEntries.set(id, newEntry);
+    return newEntry;
+  }
+
+  async getScreenTimeEntriesByWeek(userId: string, startDate: string): Promise<ScreenTimeEntry[]> {
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    
+    return Array.from(this.screenTimeEntries.values())
+      .filter(entry => {
+        if (entry.userId !== userId) return false;
+        const entryDate = new Date(entry.date);
+        return entryDate >= start && entryDate <= end;
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  // Screen Time Limits methods
+  async getScreenTimeLimits(userId: string): Promise<ScreenTimeLimit[]> {
+    return Array.from(this.screenTimeLimits.values())
+      .filter(limit => limit.userId === userId && limit.isActive);
+  }
+
+  async createScreenTimeLimit(userId: string, limit: InsertScreenTimeLimit): Promise<ScreenTimeLimit> {
+    const id = randomUUID();
+    const now = new Date();
+    const newLimit: ScreenTimeLimit = {
+      id,
+      userId,
+      appId: limit.appId || null,
+      limitMinutes: limit.limitMinutes,
+      isActive: limit.isActive ?? true,
+      createdAt: now
+    };
+    this.screenTimeLimits.set(id, newLimit);
+    return newLimit;
+  }
+
+  async updateScreenTimeLimit(id: string, limit: Partial<ScreenTimeLimit>): Promise<ScreenTimeLimit | undefined> {
+    const existingLimit = this.screenTimeLimits.get(id);
+    if (!existingLimit) return undefined;
+    
+    const updatedLimit: ScreenTimeLimit = { ...existingLimit, ...limit };
+    this.screenTimeLimits.set(id, updatedLimit);
+    return updatedLimit;
+  }
+
+  async deleteScreenTimeLimit(id: string): Promise<boolean> {
+    return this.screenTimeLimits.delete(id);
+  }
+
+  // Watchlist methods
+  async getWatchlistItems(userId: string): Promise<WatchlistItem[]> {
+    return Array.from(this.watchlistItems.values())
+      .filter(item => item.userId === userId)
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }
+
+  async createWatchlistItem(userId: string, item: InsertWatchlistItem): Promise<WatchlistItem> {
+    const id = randomUUID();
+    const now = new Date();
+    const newItem: WatchlistItem = {
+      id,
+      userId,
+      title: item.title,
+      type: item.type,
+      source: item.source || null,
+      link: item.link || null,
+      length: item.length || null,
+      status: item.status || "To Watch",
+      finishedAt: item.finishedAt || null,
+      notes: item.notes || null,
+      createdAt: now
+    };
+    this.watchlistItems.set(id, newItem);
+    return newItem;
+  }
+
+  async updateWatchlistItem(id: string, item: Partial<WatchlistItem>): Promise<WatchlistItem | undefined> {
+    const existingItem = this.watchlistItems.get(id);
+    if (!existingItem) return undefined;
+    
+    const updatedItem: WatchlistItem = { ...existingItem, ...item };
+    
+    // If status changed to "Done", set finishedAt
+    if (item.status === "Done" && existingItem.status !== "Done") {
+      updatedItem.finishedAt = new Date();
+    }
+    
+    this.watchlistItems.set(id, updatedItem);
+    return updatedItem;
+  }
+
+  async deleteWatchlistItem(id: string): Promise<boolean> {
+    return this.watchlistItems.delete(id);
+  }
+
+  private seedScreenTimeApps() {
+    const commonApps = [
+      { name: "Instagram", category: "Social" },
+      { name: "TikTok", category: "Social" },
+      { name: "Facebook", category: "Social" },
+      { name: "Twitter/X", category: "Social" },
+      { name: "YouTube", category: "Entertainment" },
+      { name: "Netflix", category: "Entertainment" },
+      { name: "Spotify", category: "Entertainment" },
+      { name: "Chrome", category: "Productivity" },
+      { name: "Safari", category: "Productivity" },
+      { name: "Slack", category: "Productivity" },
+      { name: "Microsoft Teams", category: "Productivity" },
+      { name: "Zoom", category: "Productivity" },
+      { name: "Gmail", category: "Productivity" },
+      { name: "WhatsApp", category: "Communication" },
+      { name: "Messages", category: "Communication" },
+      { name: "Discord", category: "Communication" },
+      { name: "Candy Crush", category: "Games" },
+      { name: "Among Us", category: "Games" },
+      { name: "Fortnite", category: "Games" },
+      { name: "Pokemon GO", category: "Games" }
+    ];
+
+    commonApps.forEach(app => {
+      const id = randomUUID();
+      const screenTimeApp: ScreenTimeApp = {
+        id,
+        name: app.name,
+        category: app.category,
+        isExcluded: false,
+        createdAt: new Date()
+      };
+      this.screenTimeApps.set(id, screenTimeApp);
+    });
   }
 }
 

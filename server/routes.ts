@@ -13,7 +13,11 @@ import {
   insertExerciseSchema,
   insertWorkoutSchema,
   insertSetSchema,
-  insertCardioEntrySchema
+  insertCardioEntrySchema,
+  insertScreenTimeAppSchema,
+  insertScreenTimeEntrySchema,
+  insertScreenTimeLimitSchema,
+  insertWatchlistItemSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -640,6 +644,211 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.send(csvContent);
     } catch (error) {
       res.status(500).json({ message: "Failed to export workout data" });
+    }
+  });
+
+  // Screen Time Apps
+  app.get("/api/screen-time/apps", async (req, res) => {
+    try {
+      const apps = await storage.getScreenTimeApps();
+      res.json(apps);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch screen time apps" });
+    }
+  });
+
+  app.post("/api/screen-time/apps", async (req, res) => {
+    try {
+      const validatedData = insertScreenTimeAppSchema.parse(req.body);
+      const app = await storage.createScreenTimeApp(validatedData);
+      res.json(app);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid app data" });
+    }
+  });
+
+  app.put("/api/screen-time/apps/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const app = await storage.updateScreenTimeApp(id, req.body);
+      if (!app) {
+        return res.status(404).json({ message: "App not found" });
+      }
+      res.json(app);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update app" });
+    }
+  });
+
+  // Screen Time Entries
+  app.get("/api/screen-time/entries", async (req, res) => {
+    try {
+      const { date } = req.query;
+      const entries = await storage.getScreenTimeEntries(DEFAULT_USER_ID, date as string);
+      res.json(entries);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch screen time entries" });
+    }
+  });
+
+  app.get("/api/screen-time/entries/week", async (req, res) => {
+    try {
+      const { startDate } = req.query;
+      if (!startDate) {
+        return res.status(400).json({ message: "startDate is required" });
+      }
+      const entries = await storage.getScreenTimeEntriesByWeek(DEFAULT_USER_ID, startDate as string);
+      res.json(entries);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch weekly screen time entries" });
+    }
+  });
+
+  app.post("/api/screen-time/entries", async (req, res) => {
+    try {
+      const validatedData = insertScreenTimeEntrySchema.parse(req.body);
+      const entry = await storage.createScreenTimeEntry(DEFAULT_USER_ID, validatedData);
+      res.json(entry);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid entry data" });
+    }
+  });
+
+  // Screen Time Limits
+  app.get("/api/screen-time/limits", async (req, res) => {
+    try {
+      const limits = await storage.getScreenTimeLimits(DEFAULT_USER_ID);
+      res.json(limits);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch screen time limits" });
+    }
+  });
+
+  app.post("/api/screen-time/limits", async (req, res) => {
+    try {
+      const validatedData = insertScreenTimeLimitSchema.parse(req.body);
+      const limit = await storage.createScreenTimeLimit(DEFAULT_USER_ID, validatedData);
+      res.json(limit);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid limit data" });
+    }
+  });
+
+  app.put("/api/screen-time/limits/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const limit = await storage.updateScreenTimeLimit(id, req.body);
+      if (!limit) {
+        return res.status(404).json({ message: "Limit not found" });
+      }
+      res.json(limit);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update limit" });
+    }
+  });
+
+  app.delete("/api/screen-time/limits/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteScreenTimeLimit(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Limit not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete limit" });
+    }
+  });
+
+  // Screen Time Export
+  app.get("/api/screen-time/export", async (req, res) => {
+    try {
+      const entries = await storage.getScreenTimeEntries(DEFAULT_USER_ID);
+      const apps = await storage.getScreenTimeApps();
+      const appMap = new Map(apps.map(app => [app.id, app.name]));
+
+      let csvContent = "Date,App,Minutes,Category\n";
+      
+      entries.forEach(entry => {
+        const appName = appMap.get(entry.appId) || "Unknown";
+        const app = apps.find(a => a.id === entry.appId);
+        const category = app?.category || "Other";
+        csvContent += `${entry.date},${appName},${entry.minutes},${category}\n`;
+      });
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="screen-time-data.csv"');
+      res.send(csvContent);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to export screen time data" });
+    }
+  });
+
+  // Watchlist
+  app.get("/api/watchlist", async (req, res) => {
+    try {
+      const items = await storage.getWatchlistItems(DEFAULT_USER_ID);
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch watchlist items" });
+    }
+  });
+
+  app.post("/api/watchlist", async (req, res) => {
+    try {
+      const validatedData = insertWatchlistItemSchema.parse(req.body);
+      const item = await storage.createWatchlistItem(DEFAULT_USER_ID, validatedData);
+      res.json(item);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid watchlist item data" });
+    }
+  });
+
+  app.put("/api/watchlist/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const item = await storage.updateWatchlistItem(id, req.body);
+      if (!item) {
+        return res.status(404).json({ message: "Watchlist item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update watchlist item" });
+    }
+  });
+
+  app.delete("/api/watchlist/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteWatchlistItem(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Watchlist item not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete watchlist item" });
+    }
+  });
+
+  // Watchlist Export
+  app.get("/api/watchlist/export", async (req, res) => {
+    try {
+      const items = await storage.getWatchlistItems(DEFAULT_USER_ID);
+
+      let csvContent = "Title,Type,Source,Status,Length,Finished Date,Added Date\n";
+      
+      items.forEach(item => {
+        const finishedDate = item.finishedAt ? new Date(item.finishedAt).toLocaleDateString() : "";
+        const addedDate = new Date(item.createdAt || 0).toLocaleDateString();
+        const length = item.length ? `${item.length} min` : "";
+        csvContent += `"${item.title}",${item.type},${item.source || ""},${item.status},"${length}",${finishedDate},${addedDate}\n`;
+      });
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="watchlist-data.csv"');
+      res.send(csvContent);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to export watchlist data" });
     }
   });
 

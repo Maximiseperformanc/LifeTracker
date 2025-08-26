@@ -260,6 +260,74 @@ export const insertCardioEntrySchema = createInsertSchema(cardioEntries).omit({
   createdAt: true,
 });
 
+// Content Tables - Screen Time
+export const screenTimeApps = pgTable("screen_time_apps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  category: text("category").default("Other"), // Social, Productivity, Entertainment, Games, etc.
+  isExcluded: boolean("is_excluded").default(false), // privacy toggle
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const screenTimeEntries = pgTable("screen_time_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  appId: varchar("app_id").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD format
+  minutes: integer("minutes").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const screenTimeLimits = pgTable("screen_time_limits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  appId: varchar("app_id"), // null for daily total limit
+  limitMinutes: integer("limit_minutes").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Content Tables - Watchlist
+export const watchlistItems = pgTable("watchlist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  title: text("title").notNull(),
+  type: text("type").notNull(), // movie, show, podcast, other
+  source: text("source"), // Netflix, Spotify, YouTube, etc.
+  link: text("link"), // URL if added via link
+  length: integer("length"), // runtime in minutes (optional)
+  status: text("status").notNull().default("To Watch"), // "To Watch", "In Progress", "Done"
+  finishedAt: timestamp("finished_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertScreenTimeAppSchema = createInsertSchema(screenTimeApps).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertScreenTimeEntrySchema = createInsertSchema(screenTimeEntries).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
+export const insertScreenTimeLimitSchema = createInsertSchema(screenTimeLimits).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
+export const insertWatchlistItemSchema = createInsertSchema(watchlistItems).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+}).extend({
+  type: z.enum(["movie", "show", "podcast", "other"]),
+  status: z.enum(["To Watch", "In Progress", "Done"]),
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -299,3 +367,15 @@ export type Set = typeof sets.$inferSelect;
 
 export type InsertCardioEntry = z.infer<typeof insertCardioEntrySchema>;
 export type CardioEntry = typeof cardioEntries.$inferSelect;
+
+export type InsertScreenTimeApp = z.infer<typeof insertScreenTimeAppSchema>;
+export type ScreenTimeApp = typeof screenTimeApps.$inferSelect;
+
+export type InsertScreenTimeEntry = z.infer<typeof insertScreenTimeEntrySchema>;
+export type ScreenTimeEntry = typeof screenTimeEntries.$inferSelect;
+
+export type InsertScreenTimeLimit = z.infer<typeof insertScreenTimeLimitSchema>;
+export type ScreenTimeLimit = typeof screenTimeLimits.$inferSelect;
+
+export type InsertWatchlistItem = z.infer<typeof insertWatchlistItemSchema>;
+export type WatchlistItem = typeof watchlistItems.$inferSelect;
