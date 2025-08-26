@@ -16,7 +16,15 @@ import {
   type MealEntry,
   type InsertMealEntry,
   type NutritionGoal,
-  type InsertNutritionGoal
+  type InsertNutritionGoal,
+  type Exercise,
+  type InsertExercise,
+  type Workout,
+  type InsertWorkout,
+  type Set,
+  type InsertSet,
+  type CardioEntry,
+  type InsertCardioEntry
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -68,6 +76,27 @@ export interface IStorage {
   getNutritionGoal(userId: string): Promise<NutritionGoal | undefined>;
   createNutritionGoal(userId: string, goal: InsertNutritionGoal): Promise<NutritionGoal>;
   updateNutritionGoal(id: string, goal: Partial<NutritionGoal>): Promise<NutritionGoal | undefined>;
+
+  // Exercises
+  getExercises(): Promise<Exercise[]>;
+  createExercise(exercise: InsertExercise): Promise<Exercise>;
+  
+  // Workouts
+  getWorkouts(userId: string, limit?: number, offset?: number): Promise<Workout[]>;
+  getWorkout(id: string): Promise<Workout | undefined>;
+  startWorkout(userId: string, workout: InsertWorkout): Promise<Workout>;
+  finishWorkout(id: string, notes?: string): Promise<Workout | undefined>;
+  deleteWorkout(id: string): Promise<boolean>;
+  
+  // Sets
+  getSetsForWorkout(workoutId: string): Promise<Set[]>;
+  addSetToWorkout(workoutId: string, set: InsertSet): Promise<Set>;
+  updateSet(id: string, set: Partial<Set>): Promise<Set | undefined>;
+  deleteSet(id: string): Promise<boolean>;
+  
+  // Cardio
+  getCardioEntries(userId: string, date?: string): Promise<CardioEntry[]>;
+  createCardioEntry(userId: string, entry: InsertCardioEntry): Promise<CardioEntry>;
 }
 
 export class MemStorage implements IStorage {
@@ -80,6 +109,10 @@ export class MemStorage implements IStorage {
   private foodItems: Map<string, FoodItem>;
   private mealEntries: Map<string, MealEntry>;
   private nutritionGoals: Map<string, NutritionGoal>;
+  private exercises: Map<string, Exercise>;
+  private workouts: Map<string, Workout>;
+  private sets: Map<string, Set>;
+  private cardioEntries: Map<string, CardioEntry>;
 
   constructor() {
     this.users = new Map();
@@ -91,6 +124,10 @@ export class MemStorage implements IStorage {
     this.foodItems = new Map();
     this.mealEntries = new Map();
     this.nutritionGoals = new Map();
+    this.exercises = new Map();
+    this.workouts = new Map();
+    this.sets = new Map();
+    this.cardioEntries = new Map();
 
     // Create a default user for demo purposes
     const defaultUser: User = {
@@ -102,6 +139,9 @@ export class MemStorage implements IStorage {
     
     // Seed some common food items for testing
     this.seedFoodDatabase();
+    
+    // Seed basic exercises
+    this.seedExerciseDatabase();
   }
 
   // Users
@@ -542,6 +582,180 @@ export class MemStorage implements IStorage {
         createdAt: new Date()
       });
     });
+  }
+
+  private seedExerciseDatabase() {
+    const basicExercises = [
+      "Squat",
+      "Bench Press", 
+      "Deadlift",
+      "Overhead Press",
+      "Barbell Row",
+      "Pull-up",
+      "Chin-up",
+      "Dip",
+      "Lat Pulldown",
+      "Leg Press",
+      "Leg Curl",
+      "Leg Extension",
+      "Calf Raise",
+      "Bicep Curl",
+      "Tricep Extension",
+      "Shoulder Raise",
+      "Push-up",
+      "Plank",
+      "Lunge",
+      "Hip Thrust"
+    ];
+
+    basicExercises.forEach(name => {
+      const id = randomUUID();
+      this.exercises.set(id, {
+        id,
+        name,
+        isCustom: false,
+        createdAt: new Date()
+      });
+    });
+  }
+
+  // Exercise methods
+  async getExercises(): Promise<Exercise[]> {
+    return Array.from(this.exercises.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async createExercise(exercise: InsertExercise): Promise<Exercise> {
+    const id = randomUUID();
+    const now = new Date();
+    const newExercise: Exercise = {
+      id,
+      name: exercise.name,
+      isCustom: exercise.isCustom ?? true,
+      createdAt: now
+    };
+    this.exercises.set(id, newExercise);
+    return newExercise;
+  }
+
+  // Workout methods
+  async getWorkouts(userId: string, limit = 20, offset = 0): Promise<Workout[]> {
+    const userWorkouts = Array.from(this.workouts.values())
+      .filter(workout => workout.userId === userId)
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+      .slice(offset, offset + limit);
+    return userWorkouts;
+  }
+
+  async getWorkout(id: string): Promise<Workout | undefined> {
+    return this.workouts.get(id);
+  }
+
+  async startWorkout(userId: string, workout: InsertWorkout): Promise<Workout> {
+    const id = randomUUID();
+    const now = new Date();
+    const newWorkout: Workout = {
+      id,
+      userId,
+      startedAt: workout.startedAt || now,
+      endedAt: workout.endedAt ?? null,
+      notes: workout.notes ?? null,
+      createdAt: now
+    };
+    this.workouts.set(id, newWorkout);
+    return newWorkout;
+  }
+
+  async finishWorkout(id: string, notes?: string): Promise<Workout | undefined> {
+    const workout = this.workouts.get(id);
+    if (!workout) return undefined;
+    
+    const updatedWorkout: Workout = {
+      ...workout,
+      endedAt: new Date(),
+      notes: notes ?? workout.notes
+    };
+    this.workouts.set(id, updatedWorkout);
+    return updatedWorkout;
+  }
+
+  async deleteWorkout(id: string): Promise<boolean> {
+    // Also delete all sets for this workout
+    for (const [setId, set] of this.sets.entries()) {
+      if (set.workoutId === id) {
+        this.sets.delete(setId);
+      }
+    }
+    return this.workouts.delete(id);
+  }
+
+  // Set methods
+  async getSetsForWorkout(workoutId: string): Promise<Set[]> {
+    return Array.from(this.sets.values())
+      .filter(set => set.workoutId === workoutId)
+      .sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0));
+  }
+
+  async addSetToWorkout(workoutId: string, set: InsertSet): Promise<Set> {
+    const id = randomUUID();
+    const now = new Date();
+    
+    // Get current max order index for this workout
+    const existingSets = await this.getSetsForWorkout(workoutId);
+    const maxOrderIndex = existingSets.reduce((max, s) => Math.max(max, s.orderIndex ?? 0), -1);
+    
+    const newSet: Set = {
+      id,
+      workoutId: set.workoutId,
+      exerciseId: set.exerciseId,
+      weight: set.weight,
+      reps: set.reps,
+      orderIndex: set.orderIndex ?? (maxOrderIndex + 1),
+      createdAt: now
+    };
+    this.sets.set(id, newSet);
+    return newSet;
+  }
+
+  async updateSet(id: string, set: Partial<Set>): Promise<Set | undefined> {
+    const existingSet = this.sets.get(id);
+    if (!existingSet) return undefined;
+    
+    const updatedSet: Set = { ...existingSet, ...set };
+    this.sets.set(id, updatedSet);
+    return updatedSet;
+  }
+
+  async deleteSet(id: string): Promise<boolean> {
+    return this.sets.delete(id);
+  }
+
+  // Cardio methods
+  async getCardioEntries(userId: string, date?: string): Promise<CardioEntry[]> {
+    let entries = Array.from(this.cardioEntries.values())
+      .filter(entry => entry.userId === userId);
+    
+    if (date) {
+      entries = entries.filter(entry => entry.date === date);
+    }
+    
+    return entries.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }
+
+  async createCardioEntry(userId: string, entry: InsertCardioEntry): Promise<CardioEntry> {
+    const id = randomUUID();
+    const now = new Date();
+    const newEntry: CardioEntry = {
+      id,
+      userId,
+      date: entry.date,
+      type: entry.type,
+      durationSec: entry.durationSec,
+      distanceMeters: entry.distanceMeters ?? null,
+      notes: entry.notes ?? null,
+      createdAt: now
+    };
+    this.cardioEntries.set(id, newEntry);
+    return newEntry;
   }
 }
 

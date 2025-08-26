@@ -9,7 +9,11 @@ import {
   insertTimerSessionSchema,
   insertFoodItemSchema,
   insertMealEntrySchema,
-  insertNutritionGoalSchema
+  insertNutritionGoalSchema,
+  insertExerciseSchema,
+  insertWorkoutSchema,
+  insertSetSchema,
+  insertCardioEntrySchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -451,6 +455,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(goal);
     } catch (error) {
       res.status(400).json({ message: "Failed to update nutrition goal" });
+    }
+  });
+
+  // Exercises
+  app.get("/api/exercises", async (req, res) => {
+    try {
+      const exercises = await storage.getExercises();
+      res.json(exercises);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch exercises" });
+    }
+  });
+
+  app.post("/api/exercises", async (req, res) => {
+    try {
+      const validatedData = insertExerciseSchema.parse(req.body);
+      const exercise = await storage.createExercise(validatedData);
+      res.json(exercise);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid exercise data" });
+    }
+  });
+
+  // Workouts
+  app.post("/api/workouts/start", async (req, res) => {
+    try {
+      const workout = await storage.startWorkout(DEFAULT_USER_ID, {
+        startedAt: new Date(),
+        endedAt: null,
+        notes: null
+      });
+      res.json({ workoutId: workout.id, workout });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to start workout" });
+    }
+  });
+
+  app.post("/api/workouts/:id/set", async (req, res) => {
+    try {
+      const { id: workoutId } = req.params;
+      const { action, setId, ...setData } = req.body;
+      
+      if (action === "add") {
+        const validatedData = insertSetSchema.parse({
+          ...setData,
+          workoutId
+        });
+        const set = await storage.addSetToWorkout(workoutId, validatedData);
+        res.json(set);
+      } else if (action === "update" && setId) {
+        const set = await storage.updateSet(setId, setData);
+        if (!set) {
+          return res.status(404).json({ message: "Set not found" });
+        }
+        res.json(set);
+      } else if (action === "delete" && setId) {
+        const deleted = await storage.deleteSet(setId);
+        if (!deleted) {
+          return res.status(404).json({ message: "Set not found" });
+        }
+        res.json({ success: true });
+      } else {
+        res.status(400).json({ message: "Invalid action or missing setId" });
+      }
+    } catch (error) {
+      res.status(400).json({ message: "Failed to modify set" });
+    }
+  });
+
+  app.post("/api/workouts/:id/finish", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { notes } = req.body;
+      const workout = await storage.finishWorkout(id, notes);
+      if (!workout) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      res.json(workout);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to finish workout" });
+    }
+  });
+
+  app.get("/api/workouts/history", async (req, res) => {
+    try {
+      const { limit, offset } = req.query;
+      const workouts = await storage.getWorkouts(
+        DEFAULT_USER_ID, 
+        limit ? parseInt(limit as string) : undefined,
+        offset ? parseInt(offset as string) : undefined
+      );
+      res.json(workouts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workout history" });
+    }
+  });
+
+  app.get("/api/workouts/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const workout = await storage.getWorkout(id);
+      if (!workout) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      
+      const sets = await storage.getSetsForWorkout(id);
+      res.json({ ...workout, sets });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch workout" });
+    }
+  });
+
+  app.delete("/api/workouts/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteWorkout(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Workout not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete workout" });
+    }
+  });
+
+  // Cardio
+  app.post("/api/cardio", async (req, res) => {
+    try {
+      const validatedData = insertCardioEntrySchema.parse(req.body);
+      const entry = await storage.createCardioEntry(DEFAULT_USER_ID, validatedData);
+      res.json(entry);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid cardio data" });
+    }
+  });
+
+  app.get("/api/cardio", async (req, res) => {
+    try {
+      const { date } = req.query;
+      const entries = await storage.getCardioEntries(DEFAULT_USER_ID, date as string);
+      res.json(entries);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch cardio entries" });
+    }
+  });
+
+  // Workout Export CSV
+  app.get("/api/export.csv", async (req, res) => {
+    try {
+      const workouts = await storage.getWorkouts(DEFAULT_USER_ID, 1000); // Get all workouts
+      const exercises = await storage.getExercises();
+      const exerciseMap = new Map(exercises.map(e => [e.id, e.name]));
+      
+      let csvContent = "Date,Exercise,Sets,Reps,Weight (kg),Total Volume,Duration (min)\n";
+      
+      for (const workout of workouts) {
+        const sets = await storage.getSetsForWorkout(workout.id);
+        const duration = workout.endedAt ? 
+          Math.round((new Date(workout.endedAt).getTime() - new Date(workout.startedAt).getTime()) / 60000) : 0;
+          
+        // Group sets by exercise
+        const exerciseGroups = new Map();
+        sets.forEach(set => {
+          const exerciseName = exerciseMap.get(set.exerciseId) || "Unknown";
+          if (!exerciseGroups.has(exerciseName)) {
+            exerciseGroups.set(exerciseName, []);
+          }
+          exerciseGroups.get(exerciseName).push(set);
+        });
+        
+        exerciseGroups.forEach((exerciseSets, exerciseName) => {
+          const totalSets = exerciseSets.length;
+          const totalReps = exerciseSets.reduce((sum: number, set: any) => sum + set.reps, 0);
+          const totalVolume = exerciseSets.reduce((sum: number, set: any) => sum + (set.weight * set.reps), 0);
+          const avgWeight = totalSets > 0 ? exerciseSets.reduce((sum: number, set: any) => sum + set.weight, 0) / totalSets : 0;
+          
+          csvContent += `${workout.startedAt.split('T')[0]},${exerciseName},${totalSets},${totalReps},${avgWeight.toFixed(1)},${totalVolume.toFixed(1)},${duration}\n`;
+        });
+      }
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="workout-data.csv"');
+      res.send(csvContent);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to export workout data" });
     }
   });
 

@@ -72,6 +72,44 @@ export const timerSessions = pgTable("timer_sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Workout Tables
+export const exercises = pgTable("exercises", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  isCustom: boolean("is_custom").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const workouts = pgTable("workouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  startedAt: timestamp("started_at").notNull(),
+  endedAt: timestamp("ended_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const sets = pgTable("sets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workoutId: varchar("workout_id").notNull(),
+  exerciseId: varchar("exercise_id").notNull(),
+  weight: real("weight").notNull(), // in kg or lb
+  reps: integer("reps").notNull(),
+  orderIndex: integer("order_index").default(0), // for ordering within workout
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const cardioEntries = pgTable("cardio_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD format
+  type: text("type").notNull(), // run, ride, row, other
+  durationSec: integer("duration_sec").notNull(),
+  distanceMeters: real("distance_meters"), // optional
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Nutrition Tables
 export const foodItems = pgTable("food_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -200,6 +238,28 @@ export const insertNutritionGoalSchema = createInsertSchema(nutritionGoals).omit
   createdAt: true,
 });
 
+export const insertExerciseSchema = createInsertSchema(exercises).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertWorkoutSchema = createInsertSchema(workouts).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
+export const insertSetSchema = createInsertSchema(sets).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCardioEntrySchema = createInsertSchema(cardioEntries).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -227,3 +287,15 @@ export type MealEntry = typeof mealEntries.$inferSelect;
 
 export type InsertNutritionGoal = z.infer<typeof insertNutritionGoalSchema>;
 export type NutritionGoal = typeof nutritionGoals.$inferSelect;
+
+export type InsertExercise = z.infer<typeof insertExerciseSchema>;
+export type Exercise = typeof exercises.$inferSelect;
+
+export type InsertWorkout = z.infer<typeof insertWorkoutSchema>;
+export type Workout = typeof workouts.$inferSelect;
+
+export type InsertSet = z.infer<typeof insertSetSchema>;
+export type Set = typeof sets.$inferSelect;
+
+export type InsertCardioEntry = z.infer<typeof insertCardioEntrySchema>;
+export type CardioEntry = typeof cardioEntries.$inferSelect;
