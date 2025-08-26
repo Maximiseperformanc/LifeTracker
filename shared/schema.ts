@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, boolean, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, boolean, timestamp, real, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -72,6 +72,77 @@ export const timerSessions = pgTable("timer_sessions", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Nutrition Tables
+export const foodItems = pgTable("food_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  brand: text("brand"),
+  barcode: text("barcode"),
+  servings: jsonb("servings").$type<Array<{
+    unit: string;
+    grams: number;
+    description?: string;
+  }>>(),
+  nutrients: jsonb("nutrients").$type<{
+    // Macros (per 100g)
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    // Key micros (per 100g) 
+    fiber?: number;
+    sugar?: number;
+    sodium?: number;
+    calcium?: number;
+    iron?: number;
+    potassium?: number;
+    magnesium?: number;
+    vitaminD?: number;
+    vitaminB12?: number;
+  }>().notNull(),
+  source: text("source").notNull(), // 'usda', 'openfoodfacts', 'user'
+  verified: boolean("verified").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const mealEntries = pgTable("meal_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  date: text("date").notNull(), // YYYY-MM-DD format
+  mealType: text("meal_type").notNull(), // 'breakfast', 'lunch', 'dinner', 'snack'
+  datetime: timestamp("datetime").notNull(),
+  items: jsonb("items").$type<Array<{
+    foodId: string;
+    quantity: number;
+    servingGrams: number;
+    notes?: string;
+  }>>().notNull(),
+  source: text("source").notNull(), // 'search', 'barcode', 'manual'
+  totalsCache: jsonb("totals_cache").$type<{
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+    fiber?: number;
+    sugar?: number;
+    sodium?: number;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const nutritionGoals = pgTable("nutrition_goals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  calorieTarget: integer("calorie_target").notNull(),
+  proteinTarget: integer("protein_target").notNull(), // grams
+  carbsTarget: integer("carbs_target").notNull(), // grams  
+  fatTarget: integer("fat_target").notNull(), // grams
+  fiberTarget: integer("fiber_target").default(25), // grams
+  sodiumTarget: integer("sodium_target").default(2300), // mg
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -112,6 +183,23 @@ export const insertTimerSessionSchema = createInsertSchema(timerSessions).omit({
   createdAt: true,
 });
 
+export const insertFoodItemSchema = createInsertSchema(foodItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMealEntrySchema = createInsertSchema(mealEntries).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
+export const insertNutritionGoalSchema = createInsertSchema(nutritionGoals).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+});
+
 // Types
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -130,3 +218,12 @@ export type HealthEntry = typeof healthEntries.$inferSelect;
 
 export type InsertTimerSession = z.infer<typeof insertTimerSessionSchema>;
 export type TimerSession = typeof timerSessions.$inferSelect;
+
+export type InsertFoodItem = z.infer<typeof insertFoodItemSchema>;
+export type FoodItem = typeof foodItems.$inferSelect;
+
+export type InsertMealEntry = z.infer<typeof insertMealEntrySchema>;
+export type MealEntry = typeof mealEntries.$inferSelect;
+
+export type InsertNutritionGoal = z.infer<typeof insertNutritionGoalSchema>;
+export type NutritionGoal = typeof nutritionGoals.$inferSelect;

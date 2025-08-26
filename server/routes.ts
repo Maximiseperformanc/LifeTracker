@@ -6,7 +6,10 @@ import {
   insertHabitEntrySchema,
   insertGoalSchema,
   insertHealthEntrySchema,
-  insertTimerSessionSchema
+  insertTimerSessionSchema,
+  insertFoodItemSchema,
+  insertMealEntrySchema,
+  insertNutritionGoalSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -193,6 +196,264 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Food Items - Search
+  app.get("/api/foods/search", async (req, res) => {
+    try {
+      const { q, limit } = req.query;
+      if (!q) {
+        return res.status(400).json({ message: "Query parameter 'q' is required" });
+      }
+      const foods = await storage.searchFoodItems(q as string, limit ? parseInt(limit as string) : undefined);
+      res.json(foods);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to search foods" });
+    }
+  });
+
+  app.get("/api/foods/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const food = await storage.getFoodItem(id);
+      if (!food) {
+        return res.status(404).json({ message: "Food not found" });
+      }
+      res.json(food);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch food" });
+    }
+  });
+
+  app.post("/api/foods", async (req, res) => {
+    try {
+      const validatedData = insertFoodItemSchema.parse(req.body);
+      const food = await storage.createFoodItem(validatedData);
+      res.json(food);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid food data" });
+    }
+  });
+
+  // Barcode Scanning
+  app.post("/api/scan/barcode", async (req, res) => {
+    try {
+      const { barcode } = req.body;
+      if (!barcode) {
+        return res.status(400).json({ message: "Barcode is required" });
+      }
+      
+      const food = await storage.getFoodItemByBarcode(barcode);
+      if (!food) {
+        return res.status(404).json({ message: "Food not found for barcode" });
+      }
+      
+      res.json({
+        food,
+        alternatives: [], // Could add similar foods here
+        confidence: 100
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to scan barcode" });
+    }
+  });
+
+  // Meal Entries
+  app.get("/api/meals", async (req, res) => {
+    try {
+      const { date } = req.query;
+      const meals = await storage.getMealEntries(DEFAULT_USER_ID, date as string);
+      res.json(meals);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch meals" });
+    }
+  });
+
+  app.post("/api/log/meal", async (req, res) => {
+    try {
+      const validatedData = insertMealEntrySchema.parse(req.body);
+      const meal = await storage.createMealEntry(DEFAULT_USER_ID, validatedData);
+      res.json(meal);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid meal data" });
+    }
+  });
+
+  app.put("/api/meals/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const meal = await storage.updateMealEntry(id, req.body);
+      if (!meal) {
+        return res.status(404).json({ message: "Meal not found" });
+      }
+      res.json(meal);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update meal" });
+    }
+  });
+
+  app.delete("/api/meals/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteMealEntry(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Meal not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete meal" });
+    }
+  });
+
+  // Daily Nutrition Totals
+  app.get("/api/day/:date/totals", async (req, res) => {
+    try {
+      const { date } = req.params;
+      const meals = await storage.getMealEntries(DEFAULT_USER_ID, date);
+      const goal = await storage.getNutritionGoal(DEFAULT_USER_ID);
+      
+      // Calculate totals from all meals
+      let totals = {
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        fiber: 0,
+        sugar: 0,
+        sodium: 0
+      };
+
+      for (const meal of meals) {
+        if (meal.totalsCache) {
+          totals.calories += meal.totalsCache.calories;
+          totals.protein += meal.totalsCache.protein;
+          totals.carbs += meal.totalsCache.carbs;
+          totals.fat += meal.totalsCache.fat;
+          totals.fiber += meal.totalsCache.fiber || 0;
+          totals.sugar += meal.totalsCache.sugar || 0;
+          totals.sodium += meal.totalsCache.sodium || 0;
+        }
+      }
+
+      // Calculate progress percentages
+      const progress = goal ? {
+        calories: Math.round((totals.calories / goal.calorieTarget) * 100),
+        protein: Math.round((totals.protein / goal.proteinTarget) * 100),
+        carbs: Math.round((totals.carbs / goal.carbsTarget) * 100),
+        fat: Math.round((totals.fat / goal.fatTarget) * 100),
+        fiber: Math.round((totals.fiber / (goal.fiberTarget || 25)) * 100),
+        sodium: Math.round((totals.sodium / (goal.sodiumTarget || 2300)) * 100)
+      } : null;
+
+      // Simple warnings
+      const warnings = [];
+      if (goal) {
+        if (totals.fiber < (goal.fiberTarget || 25) * 0.5) warnings.push("Low fiber intake");
+        if (totals.sodium > (goal.sodiumTarget || 2300) * 1.5) warnings.push("High sodium intake");
+        if (totals.protein < goal.proteinTarget * 0.7) warnings.push("Low protein intake");
+      }
+
+      res.json({
+        date,
+        totals,
+        goals: goal || null,
+        progress,
+        warnings,
+        meals: meals.length
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to calculate daily totals" });
+    }
+  });
+
+  // Weekly Report
+  app.get("/api/report/weekly", async (req, res) => {
+    try {
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(weekAgo.getDate() - 7);
+
+      const weeklyData = [];
+      for (let d = new Date(weekAgo); d <= today; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        const meals = await storage.getMealEntries(DEFAULT_USER_ID, dateStr);
+        
+        let dayTotals = {
+          calories: 0,
+          protein: 0,
+          fiber: 0,
+          sugar: 0
+        };
+
+        for (const meal of meals) {
+          if (meal.totalsCache) {
+            dayTotals.calories += meal.totalsCache.calories;
+            dayTotals.protein += meal.totalsCache.protein;
+            dayTotals.fiber += meal.totalsCache.fiber || 0;
+            dayTotals.sugar += meal.totalsCache.sugar || 0;
+          }
+        }
+
+        weeklyData.push({
+          date: dateStr,
+          ...dayTotals
+        });
+      }
+
+      // Calculate averages
+      const averages = {
+        calories: Math.round(weeklyData.reduce((sum, day) => sum + day.calories, 0) / 7),
+        protein: Math.round(weeklyData.reduce((sum, day) => sum + day.protein, 0) / 7),
+        fiber: Math.round(weeklyData.reduce((sum, day) => sum + day.fiber, 0) / 7),
+        sugar: Math.round(weeklyData.reduce((sum, day) => sum + day.sugar, 0) / 7)
+      };
+
+      res.json({
+        period: "7 days",
+        averages,
+        daily: weeklyData,
+        trends: {
+          calories: "stable", // Could calculate actual trends
+          protein: "stable",
+          fiber: "stable"
+        }
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to generate weekly report" });
+    }
+  });
+
+  // Nutrition Goals
+  app.get("/api/nutrition-goals", async (req, res) => {
+    try {
+      const goal = await storage.getNutritionGoal(DEFAULT_USER_ID);
+      res.json(goal || null);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch nutrition goal" });
+    }
+  });
+
+  app.post("/api/nutrition-goals", async (req, res) => {
+    try {
+      const validatedData = insertNutritionGoalSchema.parse(req.body);
+      const goal = await storage.createNutritionGoal(DEFAULT_USER_ID, validatedData);
+      res.json(goal);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid nutrition goal data" });
+    }
+  });
+
+  app.put("/api/nutrition-goals/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const goal = await storage.updateNutritionGoal(id, req.body);
+      if (!goal) {
+        return res.status(404).json({ message: "Nutrition goal not found" });
+      }
+      res.json(goal);
+    } catch (error) {
+      res.status(400).json({ message: "Failed to update nutrition goal" });
+    }
+  });
+
   // Export data
   app.get("/api/export", async (req, res) => {
     try {
@@ -201,6 +462,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const goals = await storage.getGoals(DEFAULT_USER_ID);
       const healthEntries = await storage.getHealthEntries(DEFAULT_USER_ID);
       const timerSessions = await storage.getTimerSessions(DEFAULT_USER_ID);
+      const mealEntries = await storage.getMealEntries(DEFAULT_USER_ID);
+      const nutritionGoal = await storage.getNutritionGoal(DEFAULT_USER_ID);
 
       const exportData = {
         habits,
@@ -208,6 +471,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         goals,
         healthEntries,
         timerSessions,
+        mealEntries,
+        nutritionGoal,
         exportedAt: new Date().toISOString()
       };
 

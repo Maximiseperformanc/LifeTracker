@@ -10,7 +10,13 @@ import {
   type HealthEntry,
   type InsertHealthEntry,
   type TimerSession,
-  type InsertTimerSession
+  type InsertTimerSession,
+  type FoodItem,
+  type InsertFoodItem,
+  type MealEntry,
+  type InsertMealEntry,
+  type NutritionGoal,
+  type InsertNutritionGoal
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -45,6 +51,23 @@ export interface IStorage {
   // Timer Sessions
   getTimerSessions(userId: string, date?: string): Promise<TimerSession[]>;
   createTimerSession(userId: string, session: InsertTimerSession): Promise<TimerSession>;
+
+  // Food Items
+  searchFoodItems(query: string, limit?: number): Promise<FoodItem[]>;
+  getFoodItem(id: string): Promise<FoodItem | undefined>;
+  getFoodItemByBarcode(barcode: string): Promise<FoodItem | undefined>;
+  createFoodItem(foodItem: InsertFoodItem): Promise<FoodItem>;
+
+  // Meal Entries
+  getMealEntries(userId: string, date?: string): Promise<MealEntry[]>;
+  createMealEntry(userId: string, entry: InsertMealEntry): Promise<MealEntry>;
+  updateMealEntry(id: string, entry: Partial<MealEntry>): Promise<MealEntry | undefined>;
+  deleteMealEntry(id: string): Promise<boolean>;
+
+  // Nutrition Goals
+  getNutritionGoal(userId: string): Promise<NutritionGoal | undefined>;
+  createNutritionGoal(userId: string, goal: InsertNutritionGoal): Promise<NutritionGoal>;
+  updateNutritionGoal(id: string, goal: Partial<NutritionGoal>): Promise<NutritionGoal | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -54,6 +77,9 @@ export class MemStorage implements IStorage {
   private goals: Map<string, Goal>;
   private healthEntries: Map<string, HealthEntry>;
   private timerSessions: Map<string, TimerSession>;
+  private foodItems: Map<string, FoodItem>;
+  private mealEntries: Map<string, MealEntry>;
+  private nutritionGoals: Map<string, NutritionGoal>;
 
   constructor() {
     this.users = new Map();
@@ -62,6 +88,9 @@ export class MemStorage implements IStorage {
     this.goals = new Map();
     this.healthEntries = new Map();
     this.timerSessions = new Map();
+    this.foodItems = new Map();
+    this.mealEntries = new Map();
+    this.nutritionGoals = new Map();
 
     // Create a default user for demo purposes
     const defaultUser: User = {
@@ -70,6 +99,9 @@ export class MemStorage implements IStorage {
       password: "demo"
     };
     this.users.set(defaultUser.id, defaultUser);
+    
+    // Seed some common food items for testing
+    this.seedFoodDatabase();
   }
 
   // Users
@@ -254,6 +286,262 @@ export class MemStorage implements IStorage {
     };
     this.timerSessions.set(id, session);
     return session;
+  }
+
+  // Food Items
+  async searchFoodItems(query: string, limit = 20): Promise<FoodItem[]> {
+    const results: FoodItem[] = [];
+    const searchTerm = query.toLowerCase();
+    
+    for (const food of Array.from(this.foodItems.values())) {
+      if (
+        food.name.toLowerCase().includes(searchTerm) ||
+        (food.brand && food.brand.toLowerCase().includes(searchTerm))
+      ) {
+        results.push(food);
+        if (results.length >= limit) break;
+      }
+    }
+    
+    return results;
+  }
+
+  async getFoodItem(id: string): Promise<FoodItem | undefined> {
+    return this.foodItems.get(id);
+  }
+
+  async getFoodItemByBarcode(barcode: string): Promise<FoodItem | undefined> {
+    for (const food of Array.from(this.foodItems.values())) {
+      if (food.barcode === barcode) {
+        return food;
+      }
+    }
+    return undefined;
+  }
+
+  async createFoodItem(insertFoodItem: InsertFoodItem): Promise<FoodItem> {
+    const id = randomUUID();
+    const foodItem: FoodItem = {
+      id,
+      name: insertFoodItem.name,
+      brand: insertFoodItem.brand || null,
+      barcode: insertFoodItem.barcode || null,
+      servings: insertFoodItem.servings || null,
+      nutrients: insertFoodItem.nutrients,
+      source: insertFoodItem.source,
+      verified: insertFoodItem.verified || false,
+      createdAt: new Date()
+    };
+    this.foodItems.set(id, foodItem);
+    return foodItem;
+  }
+
+  // Meal Entries
+  async getMealEntries(userId: string, date?: string): Promise<MealEntry[]> {
+    return Array.from(this.mealEntries.values()).filter(entry => 
+      entry.userId === userId && (!date || entry.date === date)
+    );
+  }
+
+  async createMealEntry(userId: string, insertEntry: InsertMealEntry): Promise<MealEntry> {
+    const id = randomUUID();
+    const entry: MealEntry = {
+      id,
+      userId,
+      date: insertEntry.date,
+      mealType: insertEntry.mealType,
+      datetime: insertEntry.datetime,
+      items: insertEntry.items,
+      source: insertEntry.source,
+      totalsCache: insertEntry.totalsCache || null,
+      createdAt: new Date()
+    };
+    this.mealEntries.set(id, entry);
+    return entry;
+  }
+
+  async updateMealEntry(id: string, updateEntry: Partial<MealEntry>): Promise<MealEntry | undefined> {
+    const existing = this.mealEntries.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updateEntry };
+    this.mealEntries.set(id, updated);
+    return updated;
+  }
+
+  async deleteMealEntry(id: string): Promise<boolean> {
+    return this.mealEntries.delete(id);
+  }
+
+  // Nutrition Goals
+  async getNutritionGoal(userId: string): Promise<NutritionGoal | undefined> {
+    for (const goal of Array.from(this.nutritionGoals.values())) {
+      if (goal.userId === userId && goal.isActive) {
+        return goal;
+      }
+    }
+    return undefined;
+  }
+
+  async createNutritionGoal(userId: string, insertGoal: InsertNutritionGoal): Promise<NutritionGoal> {
+    const id = randomUUID();
+    const goal: NutritionGoal = {
+      id,
+      userId,
+      calorieTarget: insertGoal.calorieTarget,
+      proteinTarget: insertGoal.proteinTarget,
+      carbsTarget: insertGoal.carbsTarget,
+      fatTarget: insertGoal.fatTarget,
+      fiberTarget: insertGoal.fiberTarget || 25,
+      sodiumTarget: insertGoal.sodiumTarget || 2300,
+      isActive: true,
+      createdAt: new Date()
+    };
+    this.nutritionGoals.set(id, goal);
+    return goal;
+  }
+
+  async updateNutritionGoal(id: string, updateGoal: Partial<NutritionGoal>): Promise<NutritionGoal | undefined> {
+    const existing = this.nutritionGoals.get(id);
+    if (!existing) return undefined;
+    
+    const updated = { ...existing, ...updateGoal };
+    this.nutritionGoals.set(id, updated);
+    return updated;
+  }
+
+  private seedFoodDatabase(): void {
+    // Common foods with accurate nutritional data
+    const commonFoods = [
+      {
+        name: "Banana",
+        brand: null,
+        barcode: "123456789012",
+        servings: [
+          { unit: "medium", grams: 118, description: "1 medium banana (7-8 inches)" },
+          { unit: "large", grams: 136, description: "1 large banana (8-9 inches)" },
+          { unit: "cup", grams: 150, description: "1 cup sliced" }
+        ],
+        nutrients: {
+          calories: 89,
+          protein: 1.1,
+          carbs: 22.8,
+          fat: 0.3,
+          fiber: 2.6,
+          sugar: 12.2,
+          sodium: 1,
+          potassium: 358,
+          vitaminB12: 0
+        },
+        source: "usda" as const,
+        verified: true
+      },
+      {
+        name: "Chicken Breast",
+        brand: null,
+        barcode: "234567890123",
+        servings: [
+          { unit: "breast", grams: 172, description: "1 breast, boneless, skinless" },
+          { unit: "cup", grams: 140, description: "1 cup diced" },
+          { unit: "oz", grams: 28.35, description: "1 ounce" }
+        ],
+        nutrients: {
+          calories: 165,
+          protein: 31,
+          carbs: 0,
+          fat: 3.6,
+          fiber: 0,
+          sugar: 0,
+          sodium: 74,
+          potassium: 256,
+          iron: 0.9
+        },
+        source: "usda" as const,
+        verified: true
+      },
+      {
+        name: "Brown Rice",
+        brand: null,
+        barcode: "345678901234",
+        servings: [
+          { unit: "cup", grams: 195, description: "1 cup cooked" },
+          { unit: "cup-dry", grams: 185, description: "1 cup uncooked" }
+        ],
+        nutrients: {
+          calories: 111,
+          protein: 2.6,
+          carbs: 23,
+          fat: 0.9,
+          fiber: 1.8,
+          sugar: 0.4,
+          sodium: 5,
+          magnesium: 43,
+          iron: 0.4
+        },
+        source: "usda" as const,
+        verified: true
+      },
+      {
+        name: "Greek Yogurt",
+        brand: "Generic",
+        barcode: "456789012345",
+        servings: [
+          { unit: "cup", grams: 245, description: "1 cup (8 fl oz)" },
+          { unit: "container", grams: 170, description: "1 container (6 oz)" }
+        ],
+        nutrients: {
+          calories: 59,
+          protein: 10,
+          carbs: 3.6,
+          fat: 0.4,
+          fiber: 0,
+          sugar: 3.2,
+          sodium: 36,
+          calcium: 110,
+          vitaminB12: 0.5
+        },
+        source: "usda" as const,
+        verified: true
+      },
+      {
+        name: "Almonds",
+        brand: null,
+        barcode: "567890123456",
+        servings: [
+          { unit: "oz", grams: 28, description: "1 ounce (23 almonds)" },
+          { unit: "cup", grams: 143, description: "1 cup whole" }
+        ],
+        nutrients: {
+          calories: 579,
+          protein: 21.2,
+          carbs: 21.6,
+          fat: 49.9,
+          fiber: 12.5,
+          sugar: 4.4,
+          sodium: 1,
+          calcium: 269,
+          magnesium: 270,
+          iron: 3.7
+        },
+        source: "usda" as const,
+        verified: true
+      }
+    ];
+
+    commonFoods.forEach(food => {
+      const id = randomUUID();
+      this.foodItems.set(id, {
+        id,
+        name: food.name,
+        brand: food.brand,
+        barcode: food.barcode,
+        servings: food.servings,
+        nutrients: food.nutrients,
+        source: food.source,
+        verified: food.verified,
+        createdAt: new Date()
+      });
+    });
   }
 }
 

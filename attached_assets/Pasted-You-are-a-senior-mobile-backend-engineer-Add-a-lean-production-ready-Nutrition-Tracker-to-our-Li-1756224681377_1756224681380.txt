@@ -1,0 +1,85 @@
+You are a senior mobile + backend engineer. Add a lean, production-ready Nutrition Tracker to our Life Planner (iOS, Android, Web). Prioritize speed to log, accurate macros + key micros, reliable databases, offline tolerance, and health app sync.
+
+1) Objectives (must hit)
+
+Fast logging with search autocomplete + barcode scan.
+
+Accurate nutrition: macros (kcal, protein, carbs, fat) + key micros (fiber, sugar, sodium, calcium, iron, potassium, magnesium, vitamin D, B12).
+
+Clear goals & totals: daily targets, %DV, weekly summary.
+
+Offline-first cache with background sync.
+
+Health app sync (Apple HealthKit / Google Fit).
+
+Full data export (CSV + JSON) and privacy by design.
+
+2) Must-ship features (essentials only)
+
+Search & Log: type → select food → pick serving → log.
+
+Barcode Scan: camera → barcode → instant match → edit if needed.
+
+Serving Controls: common units (g, ml, cup, slice) + quick “x½ / x2”.
+
+Daily Diary: meals (breakfast/lunch/dinner/snacks), macro ring, micro grid (top 8–12).
+
+Goals: calorie target + macro split; show % to goal and simple warnings (e.g., low fiber).
+
+Weekly Report: averages for kcal, protein, fiber, added sugars; trend arrows.
+
+Health Sync: write/read enabled nutrition fields with user permission.
+
+Export: one-tap CSV/JSON of all logs.
+
+3) Data sources & integrations (minimum viable)
+
+Databases: USDA FoodData Central + Open Food Facts (priority: local cache → remote).
+
+Barcode: platform camera + proven scanning lib.
+
+Health: Apple HealthKit nutrition types; Google Fit nutrition data type.
+
+4) Minimal data model
+
+FoodItem: id, name, brand?, barcode?, servings[], nutrients{macros + key micros}, source.
+
+MealEntry: id, datetime, items[{foodId, qty, serving_grams}], source (search|barcode), totals_cache.
+
+Goal: calorie_target, macro_split, micronutrient_targets (subset only).
+
+5) Essential endpoints
+
+GET /foods/search?q=
+
+POST /scan/barcode → returns best match (+ alternatives)
+
+POST /log/meal
+
+GET /day/{date}/totals (macros, key micros, %DV, simple warnings)
+
+GET /report/weekly
+
+GET /export (CSV/JSON)
+
+6) Acceptance criteria (v1 bar)
+
+Speed: cached barcode → logged in ≤1s; search result in ≤300ms after typing.
+
+Coverage: ≥90% match rate on a 200-barcode test set via cache+remote.
+
+Accuracy: macro totals within ±2% vs source; micros present for the top 500 items.
+
+Offline: log foods offline; sync without conflicts when back online.
+
+Health Sync: user can enable/disable; data writes/reads verified.
+
+Export: opens cleanly in Excel/Sheets; includes source for each item.
+
+7) Non-goals for v1 (explicitly defer)
+
+Photo/AI meal recognition, advanced meal plans, recipe URL import, food “grading” systems, allergy/FODMAP logic, grocery lists, habit streaks/badges.
+
+Deliverables: implemented screens (Quick Log, Diary, Food Detail, Weekly Report, Settings), backend services with tests, seed script for initial food cache, and a short demo flow script (search→log, barcode→log, export).
+
+ChatGPT can make mi

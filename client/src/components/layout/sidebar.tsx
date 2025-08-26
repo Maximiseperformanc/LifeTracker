@@ -7,7 +7,8 @@ import {
   Target, 
   Calendar, 
   BarChart3,
-  TrendingUp
+  TrendingUp,
+  Apple
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ const navigation = [
   { name: "Timer", href: "/timer", icon: Clock },
   { name: "Habits", href: "/habits", icon: CheckSquare },
   { name: "Health", href: "/health", icon: Heart },
+  { name: "Nutrition", href: "/nutrition", icon: Apple },
   { name: "Goals", href: "/goals", icon: Target },
   { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
