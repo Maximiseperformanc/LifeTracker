@@ -98,9 +98,18 @@ export class MemStorage implements IStorage {
   async createHabit(userId: string, insertHabit: InsertHabit): Promise<Habit> {
     const id = randomUUID();
     const habit: Habit = { 
-      ...insertHabit, 
       id, 
       userId,
+      name: insertHabit.name,
+      description: insertHabit.description || null,
+      trackingType: insertHabit.trackingType || "boolean",
+      unit: insertHabit.unit || null,
+      targetValue: insertHabit.targetValue || null,
+      frequency: insertHabit.frequency || "daily",
+      frequencyDays: insertHabit.frequencyDays || null,
+      icon: insertHabit.icon || null,
+      color: insertHabit.color || "#1976D2",
+      isArchived: false,
       streakDays: 0,
       createdAt: new Date()
     };
@@ -131,9 +140,13 @@ export class MemStorage implements IStorage {
   async createHabitEntry(userId: string, insertEntry: InsertHabitEntry): Promise<HabitEntry> {
     const id = randomUUID();
     const entry: HabitEntry = { 
-      ...insertEntry, 
       id, 
       userId,
+      habitId: insertEntry.habitId,
+      completed: insertEntry.completed || false,
+      value: insertEntry.value || null,
+      notes: insertEntry.notes || null,
+      date: insertEntry.date,
       createdAt: new Date()
     };
     this.habitEntries.set(id, entry);
@@ -157,9 +170,13 @@ export class MemStorage implements IStorage {
   async createGoal(userId: string, insertGoal: InsertGoal): Promise<Goal> {
     const id = randomUUID();
     const goal: Goal = { 
-      ...insertGoal, 
       id, 
       userId,
+      title: insertGoal.title,
+      description: insertGoal.description || null,
+      deadline: insertGoal.deadline || null,
+      progress: insertGoal.progress || 0,
+      category: insertGoal.category || "personal",
       createdAt: new Date()
     };
     this.goals.set(id, goal);
@@ -192,9 +209,16 @@ export class MemStorage implements IStorage {
   async createHealthEntry(userId: string, insertEntry: InsertHealthEntry): Promise<HealthEntry> {
     const id = randomUUID();
     const entry: HealthEntry = { 
-      ...insertEntry, 
       id, 
       userId,
+      date: insertEntry.date,
+      sleepHours: insertEntry.sleepHours || null,
+      sleepQuality: insertEntry.sleepQuality || null,
+      exerciseMinutes: insertEntry.exerciseMinutes || null,
+      exerciseType: insertEntry.exerciseType || null,
+      caloriesBurned: insertEntry.caloriesBurned || null,
+      mood: insertEntry.mood || null,
+      notes: insertEntry.notes || null,
       createdAt: new Date()
     };
     this.healthEntries.set(id, entry);
@@ -220,9 +244,12 @@ export class MemStorage implements IStorage {
   async createTimerSession(userId: string, insertSession: InsertTimerSession): Promise<TimerSession> {
     const id = randomUUID();
     const session: TimerSession = { 
-      ...insertSession, 
       id, 
       userId,
+      duration: insertSession.duration,
+      type: insertSession.type || "pomodoro",
+      completed: insertSession.completed || false,
+      date: insertSession.date,
       createdAt: new Date()
     };
     this.timerSessions.set(id, session);

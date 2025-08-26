@@ -14,7 +14,14 @@ export const habits = pgTable("habits", {
   userId: varchar("user_id").notNull(),
   name: text("name").notNull(),
   description: text("description"),
-  targetMinutes: integer("target_minutes").default(0),
+  trackingType: text("tracking_type").notNull().default("boolean"), // boolean, numeric, duration, custom
+  unit: text("unit"), // e.g., "glasses", "pages", "minutes", "miles", "steps"
+  targetValue: real("target_value"), // target amount (e.g., 8 glasses, 30 minutes)
+  frequency: text("frequency").notNull().default("daily"), // daily, weekly, custom
+  frequencyDays: text("frequency_days").array(), // ["monday", "tuesday"] for weekly, or custom schedule
+  icon: text("icon"), // icon identifier
+  color: text("color").default("#1976D2"), // hex color for the habit
+  isArchived: boolean("is_archived").default(false),
   streakDays: integer("streak_days").default(0),
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -24,7 +31,8 @@ export const habitEntries = pgTable("habit_entries", {
   habitId: varchar("habit_id").notNull(),
   userId: varchar("user_id").notNull(),
   completed: boolean("completed").default(false),
-  minutesSpent: integer("minutes_spent").default(0),
+  value: real("value"), // numeric value for tracking (e.g., 8 glasses, 5 miles)
+  notes: text("notes"), // optional notes for the entry
   date: text("date").notNull(), // YYYY-MM-DD format
   createdAt: timestamp("created_at").defaultNow(),
 });
@@ -74,6 +82,10 @@ export const insertHabitSchema = createInsertSchema(habits).omit({
   userId: true,
   streakDays: true,
   createdAt: true,
+}).extend({
+  trackingType: z.enum(["boolean", "numeric", "duration", "custom"]),
+  frequency: z.enum(["daily", "weekly", "custom"]),
+  frequencyDays: z.array(z.string()).optional(),
 });
 
 export const insertHabitEntrySchema = createInsertSchema(habitEntries).omit({

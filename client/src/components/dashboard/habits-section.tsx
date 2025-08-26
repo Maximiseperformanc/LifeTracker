@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Check } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import AddHabitDialog from "@/components/dialogs/add-habit-dialog";
+import { Plus } from "lucide-react";
+import AdvancedAddHabitDialog from "@/components/dialogs/advanced-add-habit-dialog";
+import HabitEntryForm from "@/components/habits/habit-entry-form";
 import type { Habit, HabitEntry } from "@shared/schema";
 
 interface HabitsSectionProps {
@@ -14,59 +12,10 @@ interface HabitsSectionProps {
 
 export default function HabitsSection({ habits, todayEntries }: HabitsSectionProps) {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const today = new Date().toISOString().split('T')[0];
-
-  const toggleHabitMutation = useMutation({
-    mutationFn: async ({ habitId, completed }: { habitId: string; completed: boolean }) => {
-      const existingEntry = todayEntries.find(entry => entry.habitId === habitId);
-      
-      if (existingEntry) {
-        return apiRequest("PUT", `/api/habit-entries/${existingEntry.id}`, { 
-          completed 
-        });
-      } else {
-        return apiRequest("POST", "/api/habit-entries", {
-          habitId,
-          completed,
-          date: today,
-          minutesSpent: 0
-        });
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/habit-entries'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/habits'] });
-      toast({
-        title: "Habit updated",
-        description: "Your habit progress has been saved.",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update habit. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
 
   const getHabitEntry = (habitId: string) => {
     return todayEntries.find(entry => entry.habitId === habitId);
-  };
-
-  const isHabitCompleted = (habitId: string) => {
-    const entry = getHabitEntry(habitId);
-    return entry?.completed || false;
-  };
-
-  const handleToggleHabit = (habitId: string) => {
-    const currentlyCompleted = isHabitCompleted(habitId);
-    toggleHabitMutation.mutate({ 
-      habitId, 
-      completed: !currentlyCompleted 
-    });
   };
 
   return (
@@ -85,45 +34,45 @@ export default function HabitsSection({ habits, todayEntries }: HabitsSectionPro
           </Button>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {habits.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">No habits yet. Start building healthy routines!</p>
-              <Button onClick={() => setAddDialogOpen(true)} data-testid="button-add-first-habit">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Your First Habit
-              </Button>
+            <div className="text-center py-8 text-gray-500">
+              <p>No habits yet. Add your first habit to get started!</p>
             </div>
           ) : (
-            habits.map((habit) => {
-              const completed = isHabitCompleted(habit.id);
+            habits.slice(0, 5).map((habit) => {
+              const existingEntry = getHabitEntry(habit.id);
               return (
-                <div 
-                  key={habit.id} 
-                  className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg"
-                  data-testid={`habit-${habit.id}`}
+                <div
+                  key={habit.id}
+                  className="flex items-center space-x-3 p-3 bg-white rounded-lg border hover:shadow-sm transition-shadow"
                 >
-                  <button
-                    onClick={() => handleToggleHabit(habit.id)}
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-sm transition-colors ${
-                      completed
-                        ? "bg-secondary text-white"
-                        : "border-2 border-gray-300 hover:border-secondary"
-                    }`}
-                    data-testid={`button-toggle-habit-${habit.id}`}
+                  <div 
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm flex-shrink-0"
+                    style={{ backgroundColor: habit.color || "#1976D2" }}
                   >
-                    {completed && <Check className="h-3 w-3" />}
-                  </button>
-                  <div className="flex-1">
-                    <p className={`font-medium ${completed ? "text-gray-900" : "text-gray-700"}`}>
+                    {habit.icon === "droplets" ? "💧" : 
+                     habit.icon === "book" ? "📚" : 
+                     habit.icon === "dumbbell" ? "🏋️" :
+                     habit.icon === "heart" ? "❤️" :
+                     habit.icon === "footprints" ? "👣" :
+                     habit.icon === "moon" ? "🌙" : "📝"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">
                       {habit.name}
                     </p>
                     <p className="text-sm text-gray-600">
                       {habit.streakDays} day streak
                     </p>
                   </div>
-                  <div className="text-sm text-gray-600">
-                    {(habit.targetMinutes || 0) > 0 ? `${habit.targetMinutes} min` : "Daily"}
+                  <div className="flex-shrink-0">
+                    <HabitEntryForm 
+                      habit={habit}
+                      existingEntry={existingEntry}
+                      date={today}
+                      compact={true}
+                    />
                   </div>
                 </div>
               );
@@ -132,7 +81,7 @@ export default function HabitsSection({ habits, todayEntries }: HabitsSectionPro
         </div>
       </div>
 
-      <AddHabitDialog 
+      <AdvancedAddHabitDialog 
         open={addDialogOpen} 
         onOpenChange={setAddDialogOpen} 
       />

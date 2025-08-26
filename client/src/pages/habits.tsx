@@ -11,7 +11,7 @@ import { Menu, Plus, Check, Clock, Flame, Calendar, Target, Edit, Trash2 } from 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import AddHabitDialog from "@/components/dialogs/add-habit-dialog";
+import AdvancedAddHabitDialog from "@/components/dialogs/advanced-add-habit-dialog";
 import type { Habit, HabitEntry } from "@shared/schema";
 
 export default function HabitsPage() {
@@ -280,10 +280,10 @@ export default function HabitsPage() {
                                     <Flame className="h-4 w-4" />
                                     <span>{stats.currentStreak} day streak</span>
                                   </div>
-                                  {(habit.targetMinutes || 0) > 0 && (
+                                  {(habit.targetValue || 0) > 0 && (
                                     <div className="flex items-center space-x-1 text-sm text-gray-600">
-                                      <Clock className="h-4 w-4" />
-                                      <span>{habit.targetMinutes} min</span>
+                                      <Target className="h-4 w-4" />
+                                      <span>{habit.targetValue} {habit.unit || ""}</span>
                                     </div>
                                   )}
                                 </div>
@@ -452,7 +452,7 @@ export default function HabitsPage() {
         </main>
       </div>
 
-      <AddHabitDialog 
+      <AdvancedAddHabitDialog 
         open={addDialogOpen} 
         onOpenChange={setAddDialogOpen} 
       />
