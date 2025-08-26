@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +64,9 @@ export default function AddHabitDialog({ open, onOpenChange }: AddHabitDialogPro
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Habit</DialogTitle>
+          <DialogDescription>
+            Create a new habit to track your daily progress and build consistency.
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
