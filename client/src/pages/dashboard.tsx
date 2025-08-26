@@ -26,7 +26,8 @@ export default function Dashboard() {
   });
 
   const { data: todayHabitEntries = [] } = useQuery<HabitEntry[]>({
-    queryKey: ['/api/habit-entries', { date: today }]
+    queryKey: ['/api/habit-entries', today],
+    queryFn: () => fetch(`/api/habit-entries?date=${today}`).then(res => res.json())
   });
 
   const { data: goals = [] } = useQuery<Goal[]>({
@@ -38,7 +39,8 @@ export default function Dashboard() {
   });
 
   const { data: todayTimerSessions = [] } = useQuery<TimerSession[]>({
-    queryKey: ['/api/timer-sessions', { date: today }]
+    queryKey: ['/api/timer-sessions', today],
+    queryFn: () => fetch(`/api/timer-sessions?date=${today}`).then(res => res.json())
   });
 
   // Calculate stats
@@ -55,9 +57,9 @@ export default function Dashboard() {
   const todayHealth = healthEntries.find(entry => entry.date === today);
   const sleepQuality = todayHealth?.sleepQuality ? `${todayHealth.sleepQuality}/10` : "No data";
   
-  const goalsOnTrack = goals.filter(goal => goal.progress >= 50).length;
+  const goalsOnTrack = goals.filter(goal => (goal.progress || 0) >= 50).length;
   const avgGoalProgress = goals.length > 0 
-    ? Math.round(goals.reduce((sum, goal) => sum + goal.progress, 0) / goals.length) 
+    ? Math.round(goals.reduce((sum, goal) => sum + (goal.progress || 0), 0) / goals.length) 
     : 0;
 
   const handleExportData = async () => {

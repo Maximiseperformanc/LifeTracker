@@ -37,6 +37,7 @@ export default function HabitsSection({ habits, todayEntries }: HabitsSectionPro
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/habit-entries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/habits'] });
       toast({
         title: "Habit updated",
         description: "Your habit progress has been saved.",
@@ -122,7 +123,7 @@ export default function HabitsSection({ habits, todayEntries }: HabitsSectionPro
                     </p>
                   </div>
                   <div className="text-sm text-gray-600">
-                    {habit.targetMinutes > 0 ? `${habit.targetMinutes} min` : "Daily"}
+                    {(habit.targetMinutes || 0) > 0 ? `${habit.targetMinutes} min` : "Daily"}
                   </div>
                 </div>
               );
