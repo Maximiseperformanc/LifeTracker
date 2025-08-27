@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Plus, CheckSquare, Clock, Calendar, AlertCircle, Flame,
   Filter, Search, MoreHorizontal, Edit, Trash2, 
@@ -52,7 +51,6 @@ type CategoryFormData = z.infer<typeof categoryFormSchema>;
 export default function TodoPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("matrix");
   const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
@@ -283,7 +281,7 @@ export default function TodoPage() {
             
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               {category && (
-                <Badge variant="secondary" className="text-xs" style={{ color: category.color }}>
+                <Badge variant="secondary" className="text-xs" style={{ color: category.color || '#3B82F6' }}>
                   {category.icon} {category.name}
                 </Badge>
               )}
@@ -493,7 +491,7 @@ export default function TodoPage() {
                           <SelectContent>
                             {categories.map((category) => (
                               <SelectItem key={category.id} value={category.id}>
-                                <span style={{ color: category.color }}>
+                                <span style={{ color: category.color || '#3B82F6' }}>
                                   {category.icon} {category.name}
                                 </span>
                               </SelectItem>
@@ -662,168 +660,131 @@ export default function TodoPage() {
         </div>
       </div>
 
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="overview">Essential Overview</TabsTrigger>
-          <TabsTrigger value="matrix">Eisenhower Matrix</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-        </TabsList>
+      {/* Essential Overview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-red-600" />
+            Most Essential Tasks
+            <Badge variant="secondary">{essentialTasks.length}</Badge>
+          </CardTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            High-priority, urgent, important, and overdue tasks that need immediate attention
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {essentialTasks.length > 0 ? (
+            essentialTasks.map(renderTodoCard)
+          ) : (
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No essential tasks at the moment</p>
+              <p className="text-xs">Great job staying on top of things!</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Essential Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-red-600" />
-                Most Essential Tasks
-                <Badge variant="secondary">{essentialTasks.length}</Badge>
-              </CardTitle>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                High-priority, urgent, important, and overdue tasks that need immediate attention
-              </p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {essentialTasks.length > 0 ? (
-                essentialTasks.map(renderTodoCard)
-              ) : (
-                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No essential tasks at the moment</p>
-                  <p className="text-xs">Great job staying on top of things!</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* Eisenhower Matrix - 4 Quadrants */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Eisenhower Matrix</h2>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {/* Quadrant 1: Urgent & Important (Do First) */}
+          {renderQuadrant(
+            urgentImportant,
+            "Do First",
+            <Flame className="h-5 w-5 text-red-600" />,
+            "Crisis situations and urgent deadlines"
+          )}
 
-          {/* Quick Stats */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-red-600">{urgentImportant.length}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Do First</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-blue-600">{notUrgentImportant.length}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Schedule</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-orange-600">{urgentNotImportant.length}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Delegate</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-gray-600">{notUrgentNotImportant.length}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Eliminate</div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+          {/* Quadrant 2: Not Urgent & Important (Schedule) */}
+          {renderQuadrant(
+            notUrgentImportant,
+            "Schedule",
+            <Calendar className="h-5 w-5 text-blue-600" />,
+            "Important goals and planning activities"
+          )}
 
-        {/* Eisenhower Matrix Tab */}
-        <TabsContent value="matrix" className="space-y-6">
-          <div className="grid gap-4 lg:grid-cols-2">
-            {/* Quadrant 1: Urgent & Important (Do First) */}
-            {renderQuadrant(
-              urgentImportant,
-              "Do First",
-              <Flame className="h-5 w-5 text-red-600" />,
-              "Crisis situations and urgent deadlines"
-            )}
+          {/* Quadrant 3: Urgent & Not Important (Delegate) */}
+          {renderQuadrant(
+            urgentNotImportant,
+            "Delegate",
+            <ArrowRight className="h-5 w-5 text-orange-600" />,
+            "Interruptions and some meetings"
+          )}
 
-            {/* Quadrant 2: Not Urgent & Important (Schedule) */}
-            {renderQuadrant(
-              notUrgentImportant,
-              "Schedule",
-              <Calendar className="h-5 w-5 text-blue-600" />,
-              "Important goals and planning activities"
-            )}
+          {/* Quadrant 4: Not Urgent & Not Important (Eliminate) */}
+          {renderQuadrant(
+            notUrgentNotImportant,
+            "Eliminate",
+            <XCircle className="h-5 w-5 text-gray-600" />,
+            "Time wasters and excessive entertainment"
+          )}
+        </div>
+      </div>
 
-            {/* Quadrant 3: Urgent & Not Important (Delegate) */}
-            {renderQuadrant(
-              urgentNotImportant,
-              "Delegate",
-              <ArrowRight className="h-5 w-5 text-orange-600" />,
-              "Interruptions and some meetings"
-            )}
-
-            {/* Quadrant 4: Not Urgent & Not Important (Eliminate) */}
-            {renderQuadrant(
-              notUrgentNotImportant,
-              "Eliminate",
-              <XCircle className="h-5 w-5 text-gray-600" />,
-              "Time wasters and excessive entertainment"
-            )}
-          </div>
-        </TabsContent>
-
-        {/* Categories Tab */}
-        <TabsContent value="categories" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {categories.map((category) => {
-              const categoryTodos = filteredTodos.filter(todo => todo.categoryId === category.id);
-              const completedInCategory = categoryTodos.filter(todo => todo.status === "completed").length;
-              const pendingInCategory = categoryTodos.filter(todo => todo.status !== "completed").length;
-              
-              return (
-                <Card key={category.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="flex items-center gap-2">
-                        <span style={{ color: category.color }}>{category.icon}</span>
-                        {category.name}
-                      </CardTitle>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteCategoryMutation.mutate(category.id)}
-                        data-testid={`button-delete-category-${category.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+      {/* Categories Section */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Categories</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {categories.map((category) => {
+            const categoryTodos = filteredTodos.filter(todo => todo.categoryId === category.id);
+            const completedInCategory = categoryTodos.filter(todo => todo.status === "completed").length;
+            const pendingInCategory = categoryTodos.filter(todo => todo.status !== "completed").length;
+            
+            return (
+              <Card key={category.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <span style={{ color: category.color || '#3B82F6' }}>{category.icon}</span>
+                      {category.name}
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteCategoryMutation.mutate(category.id)}
+                      data-testid={`button-delete-category-${category.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {category.description && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{category.description}</p>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                      <div className="font-semibold text-gray-900 dark:text-white">{pendingInCategory}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">Pending</div>
                     </div>
-                    {category.description && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{category.description}</p>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                        <div className="font-semibold text-gray-900 dark:text-white">{pendingInCategory}</div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Pending</div>
-                      </div>
-                      <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded">
-                        <div className="font-semibold text-green-600">{completedInCategory}</div>
-                        <div className="text-xs text-gray-600 dark:text-gray-400">Completed</div>
-                      </div>
+                    <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                      <div className="font-semibold text-green-600">{completedInCategory}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">Completed</div>
                     </div>
-                    
-                    {pendingInCategory > 0 && (
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {categoryTodos
-                          .filter(todo => todo.status !== "completed")
-                          .slice(0, 5)
-                          .map(renderTodoCard)
-                        }
-                        {pendingInCategory > 5 && (
-                          <p className="text-xs text-gray-500 text-center py-2">
-                            +{pendingInCategory - 5} more tasks
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </TabsContent>
-      </Tabs>
+                  </div>
+                  
+                  {pendingInCategory > 0 && (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {categoryTodos
+                        .filter(todo => todo.status !== "completed")
+                        .slice(0, 5)
+                        .map(renderTodoCard)
+                      }
+                      {pendingInCategory > 5 && (
+                        <p className="text-xs text-gray-500 text-center py-2">
+                          +{pendingInCategory - 5} more tasks
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
