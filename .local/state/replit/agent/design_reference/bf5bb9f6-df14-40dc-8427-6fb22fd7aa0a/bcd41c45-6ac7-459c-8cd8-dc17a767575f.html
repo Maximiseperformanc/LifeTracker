@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LifeTrack Pro - Personal Development Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'inter': ['Inter', 'sans-serif']
+                    },
+                    colors: {
+                        primary: '#1976D2',
+                        secondary: '#388E3C', 
+                        accent: '#FF7043',
+                        surface: '#FFFFFF',
+                        background: '#FAFAFA'
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+<body class="bg-background font-inter">
+    <!-- @COMPONENT: AppLayout [main layout with sidebar and content] -->
+    <div class="flex h-screen">
+        <!-- @COMPONENT: Sidebar [navigation and user info] -->
+        <div class="w-64 bg-surface border-r border-gray-200 hidden lg:flex flex-col">
+            <div class="p-6 border-b border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-chart-line text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-gray-900">LifeTrack Pro</h1>
+                        <p class="text-sm text-gray-600">Personal Development</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="flex-1 p-4 space-y-2">
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 bg-blue-50 text-primary rounded-lg" data-mock="true">
+                    <i class="fas fa-home"></i>
+                    <span class="font-medium">Dashboard</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg" data-mock="true">
+                    <i class="fas fa-clock"></i>
+                    <span>Timer</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg" data-mock="true">
+                    <i class="fas fa-list-check"></i>
+                    <span>Habits</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg" data-mock="true">
+                    <i class="fas fa-heart-pulse"></i>
+                    <span>Health</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg" data-mock="true">
+                    <i class="fas fa-target"></i>
+                    <span>Goals</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg" data-mock="true">
+                    <i class="fas fa-calendar"></i>
+                    <span>Calendar</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 px-3 py-2 text-gray-700 hover:bg-gray-50 rounded-lg" data-mock="true">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Analytics</span>
+                </a>
+            </nav>
+
+            <div class="p-4 border-t border-gray-200">
+                <div class="flex items-center space-x-3">
+                    <!-- Modern clean office workspace with laptop and notebook -->
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=40&h=40" alt="User profile" class="w-10 h-10 rounded-full" data-mock="true"/>
+                    <div>
+                        <p class="font-medium text-gray-900" data-bind="user.name" data-mock="true">Sarah Chen</p>
+                        <p class="text-sm text-gray-600" data-mock="true">Premium User</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: Sidebar -->
+
+        <!-- @COMPONENT: MainContent [dashboard content area] -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- @COMPONENT: TopBar [header with mobile menu and actions] -->
+            <header class="bg-surface border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <button class="lg:hidden p-2 text-gray-600">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <div>
+                            <h2 class="text-2xl font-semibold text-gray-900">Dashboard</h2>
+                            <p class="text-gray-600">Track your daily progress and achievements</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button class="bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors" data-event="click:exportData">
+                            <i class="fas fa-download mr-2"></i>Export Data
+                        </button>
+                        <button class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg">
+                            <i class="fas fa-bell"></i>
+                        </button>
+                        <button class="p-2 text-gray-600 hover:bg-gray-50 rounded-lg">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    </div>
+                </div>
+            </header>
+            <!-- @END_COMPONENT: TopBar -->
+
+            <!-- @COMPONENT: DashboardContent [main dashboard with metrics and charts] -->
+            <main class="flex-1 overflow-y-auto p-6">
+                <!-- Quick Stats Row -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- @COMPONENT: StatCard [productivity stat] -->
+                    <div class="bg-surface p-6 rounded-xl border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm font-medium">Focus Time Today</p>
+                                <p class="text-2xl font-semibold text-gray-900 mt-1" data-bind="stats.focusTime" data-mock="true">4h 32m</p>
+                                <p class="text-secondary text-sm mt-1">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    <span data-mock="true">+12% from yesterday</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-clock text-primary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: StatCard -->
+
+                    <!-- @COMPONENT: StatCard [habits stat] -->
+                    <div class="bg-surface p-6 rounded-xl border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm font-medium">Habits Completed</p>
+                                <p class="text-2xl font-semibold text-gray-900 mt-1" data-bind="stats.habitsCompleted" data-mock="true">7/9</p>
+                                <p class="text-secondary text-sm mt-1">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    <span data-mock="true">78% completion rate</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-list-check text-secondary text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: StatCard -->
+
+                    <!-- @COMPONENT: StatCard [health stat] -->
+                    <div class="bg-surface p-6 rounded-xl border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm font-medium">Sleep Quality</p>
+                                <p class="text-2xl font-semibold text-gray-900 mt-1" data-bind="stats.sleepQuality" data-mock="true">8.2/10</p>
+                                <p class="text-secondary text-sm mt-1">
+                                    <i class="fas fa-arrow-up mr-1"></i>
+                                    <span data-mock="true">7.5h last night</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-moon text-purple-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: StatCard -->
+
+                    <!-- @COMPONENT: StatCard [goals stat] -->
+                    <div class="bg-surface p-6 rounded-xl border border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-gray-600 text-sm font-medium">Weekly Goal Progress</p>
+                                <p class="text-2xl font-semibold text-gray-900 mt-1" data-bind="stats.goalProgress" data-mock="true">68%</p>
+                                <p class="text-accent text-sm mt-1">
+                                    <i class="fas fa-target mr-1"></i>
+                                    <span data-mock="true">5/7 goals on track</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                                <i class="fas fa-bullseye text-accent text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: StatCard -->
+                </div>
+
+                <!-- Main Content Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- @COMPONENT: TimerSection [pomodoro timer] -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-surface p-6 rounded-xl border border-gray-200">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900">Focus Timer</h3>
+                                <div class="flex items-center space-x-2">
+                                    <span class="bg-blue-100 text-primary text-sm px-2 py-1 rounded-full" data-mock="true">Pomodoro</span>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center mb-6">
+                                <div class="relative w-40 h-40 mx-auto mb-4">
+                                    <svg class="w-40 h-40 transform -rotate-90" viewBox="0 0 144 144">
+                                        <circle cx="72" cy="72" r="66" stroke="#E5E7EB" stroke-width="8" fill="none"/>
+                                        <circle cx="72" cy="72" r="66" stroke="#1976D2" stroke-width="8" fill="none"
+                                            stroke-dasharray="414.69" stroke-dashoffset="103.67" stroke-linecap="round"/>
+                                    </svg>
+                                    <div class="absolute inset-0 flex items-center justify-center">
+                                        <div class="text-center">
+                                            <div class="text-3xl font-bold text-gray-900" data-bind="timer.display" data-mock="true">18:42</div>
+                                            <div class="text-sm text-gray-600" data-mock="true">Focus Session</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex justify-center space-x-3">
+                                    <button class="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors" data-event="click:startTimer" data-implementation="Should start/pause timer">
+                                        <i class="fas fa-play mr-2"></i>Start
+                                    </button>
+                                    <button class="bg-gray-100 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-200 transition-colors" data-event="click:resetTimer">
+                                        <i class="fas fa-stop mr-2"></i>Reset
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Sessions Today</span>
+                                    <span class="font-medium text-gray-900" data-bind="timer.sessionsToday" data-mock="true">6</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Total Focus Time</span>
+                                    <span class="font-medium text-gray-900" data-bind="timer.totalTime" data-mock="true">4h 32m</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: TimerSection -->
+
+                    <!-- @COMPONENT: HabitsSection [daily habits tracking] -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-surface p-6 rounded-xl border border-gray-200">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900">Today's Habits</h3>
+                                <button class="text-primary font-medium hover:text-blue-700" data-event="click:addHabit">
+                                    <i class="fas fa-plus mr-2"></i>Add Habit
+                                </button>
+                            </div>
+
+                            <div class="space-y-4">
+                                <!-- @MAP: habits.map(habit => ( -->
+                                <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                                    <button class="w-6 h-6 bg-secondary rounded-full flex items-center justify-center text-white text-sm" data-event="click:toggleHabit" data-mock="true">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-900" data-bind="habit.name" data-mock="true">Morning Meditation</p>
+                                        <p class="text-sm text-gray-600" data-bind="habit.streak" data-mock="true">7 day streak</p>
+                                    </div>
+                                    <div class="text-sm text-gray-600" data-bind="habit.time" data-mock="true">10 min</div>
+                                </div>
+
+                                <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                                    <button class="w-6 h-6 bg-secondary rounded-full flex items-center justify-center text-white text-sm" data-event="click:toggleHabit" data-mock="true">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-900" data-bind="habit.name" data-mock="true">Read for 30 minutes</p>
+                                        <p class="text-sm text-gray-600" data-bind="habit.streak" data-mock="true">12 day streak</p>
+                                    </div>
+                                    <div class="text-sm text-gray-600" data-bind="habit.time" data-mock="true">30 min</div>
+                                </div>
+
+                                <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                                    <button class="w-6 h-6 border-2 border-gray-300 rounded-full flex items-center justify-center" data-event="click:toggleHabit" data-mock="true">
+                                    </button>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-700" data-bind="habit.name" data-mock="true">Evening workout</p>
+                                        <p class="text-sm text-gray-600" data-bind="habit.streak" data-mock="true">3 day streak</p>
+                                    </div>
+                                    <div class="text-sm text-gray-600" data-bind="habit.time" data-mock="true">45 min</div>
+                                </div>
+
+                                <div class="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                                    <button class="w-6 h-6 border-2 border-gray-300 rounded-full flex items-center justify-center" data-event="click:toggleHabit" data-mock="true">
+                                    </button>
+                                    <div class="flex-1">
+                                        <p class="font-medium text-gray-700" data-bind="habit.name" data-mock="true">Drink 8 glasses of water</p>
+                                        <p class="text-sm text-gray-600" data-bind="habit.streak" data-mock="true">5/8 completed</p>
+                                    </div>
+                                    <div class="text-sm text-gray-600" data-bind="habit.progress" data-mock="true">63%</div>
+                                </div>
+                                <!-- @END_MAP )) -->
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: HabitsSection -->
+                </div>
+
+                <!-- Charts and Analytics Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <!-- @COMPONENT: ProgressChart [weekly progress visualization] -->
+                    <div class="bg-surface p-6 rounded-xl border border-gray-200">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900">Weekly Progress</h3>
+                            <select class="text-sm border border-gray-300 rounded-lg px-3 py-2" data-mock="true">
+                                <option>This Week</option>
+                                <option>Last Week</option>
+                                <option>This Month</option>
+                            </select>
+                        </div>
+                        
+                        <div class="h-64">
+                            <canvas id="progressChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: ProgressChart -->
+
+                    <!-- @COMPONENT: HealthMetrics [health tracking dashboard] -->
+                    <div class="bg-surface p-6 rounded-xl border border-gray-200">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900">Health Metrics</h3>
+                            <button class="text-primary font-medium hover:text-blue-700" data-event="click:logHealth">
+                                <i class="fas fa-plus mr-2"></i>Log Data
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-moon text-white"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Sleep</p>
+                                        <p class="text-sm text-gray-600" data-bind="health.sleep" data-mock="true">7.5 hours</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-lg font-semibold text-gray-900" data-mock="true">85%</div>
+                                    <div class="text-sm text-gray-600">Quality</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-dumbbell text-white"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Exercise</p>
+                                        <p class="text-sm text-gray-600" data-bind="health.exercise" data-mock="true">45 min cardio</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-lg font-semibold text-gray-900" data-mock="true">420</div>
+                                    <div class="text-sm text-gray-600">Calories</div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center justify-between p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 rounded-lg">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center">
+                                        <i class="fas fa-smile text-white"></i>
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-gray-900">Mood</p>
+                                        <p class="text-sm text-gray-600" data-bind="health.mood" data-mock="true">Good</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-lg font-semibold text-gray-900" data-mock="true">8.2</div>
+                                    <div class="text-sm text-gray-600">/10</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: HealthMetrics -->
+                </div>
+
+                <!-- Goals and Tasks Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- @COMPONENT: GoalsSection [current goals tracking] -->
+                    <div class="bg-surface p-6 rounded-xl border border-gray-200">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900">Current Goals</h3>
+                            <button class="text-primary font-medium hover:text-blue-700" data-event="click:addGoal">
+                                <i class="fas fa-plus mr-2"></i>New Goal
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <!-- @MAP: goals.map(goal => ( -->
+                            <div class="p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-medium text-gray-900" data-bind="goal.title" data-mock="true">Complete React Course</h4>
+                                    <span class="text-sm text-gray-600" data-bind="goal.deadline" data-mock="true">Dec 15</span>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-gray-600">Progress</span>
+                                        <span class="font-medium text-gray-900" data-bind="goal.progress" data-mock="true">73%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-primary h-2 rounded-full" style="width: 73%" data-bind="goal.progressWidth"></div>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-gray-600" data-bind="goal.description" data-mock="true">8/11 modules completed</p>
+                            </div>
+
+                            <div class="p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-medium text-gray-900" data-bind="goal.title" data-mock="true">Run 5K in under 25 minutes</h4>
+                                    <span class="text-sm text-gray-600" data-bind="goal.deadline" data-mock="true">Jan 1</span>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-gray-600">Progress</span>
+                                        <span class="font-medium text-gray-900" data-bind="goal.progress" data-mock="true">45%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-secondary h-2 rounded-full" style="width: 45%" data-bind="goal.progressWidth"></div>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-gray-600" data-bind="goal.description" data-mock="true">Current best: 28:30</p>
+                            </div>
+
+                            <div class="p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center justify-between mb-3">
+                                    <h4 class="font-medium text-gray-900" data-bind="goal.title" data-mock="true">Save $5,000 for vacation</h4>
+                                    <span class="text-sm text-gray-600" data-bind="goal.deadline" data-mock="true">Jun 1</span>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="text-gray-600">Progress</span>
+                                        <span class="font-medium text-gray-900" data-bind="goal.progress" data-mock="true">62%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-accent h-2 rounded-full" style="width: 62%" data-bind="goal.progressWidth"></div>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-gray-600" data-bind="goal.description" data-mock="true">$3,100 saved so far</p>
+                            </div>
+                            <!-- @END_MAP )) -->
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: GoalsSection -->
+
+                    <!-- @COMPONENT: InsightsSection [AI insights and recommendations] -->
+                    <div class="bg-surface p-6 rounded-xl border border-gray-200">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900">Insights & Recommendations</h3>
+                            <button class="text-primary font-medium hover:text-blue-700" data-event="click:refreshInsights">
+                                <i class="fas fa-refresh mr-2"></i>Refresh
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="p-4 bg-blue-50 rounded-lg border-l-4 border-primary">
+                                <div class="flex items-start space-x-3">
+                                    <i class="fas fa-lightbulb text-primary mt-1"></i>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 mb-1">Productivity Peak</h4>
+                                        <p class="text-sm text-gray-700" data-mock="true">You're most focused between 9-11 AM. Consider scheduling deep work during this time.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-green-50 rounded-lg border-l-4 border-secondary">
+                                <div class="flex items-start space-x-3">
+                                    <i class="fas fa-chart-line text-secondary mt-1"></i>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 mb-1">Habit Streak</h4>
+                                        <p class="text-sm text-gray-700" data-mock="true">Great job maintaining your meditation streak! You're on track to reach 30 days.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-orange-50 rounded-lg border-l-4 border-accent">
+                                <div class="flex items-start space-x-3">
+                                    <i class="fas fa-exclamation-triangle text-accent mt-1"></i>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 mb-1">Sleep Pattern</h4>
+                                        <p class="text-sm text-gray-700" data-mock="true">Your sleep quality drops when you use devices after 10 PM. Consider a digital curfew.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4 bg-purple-50 rounded-lg border-l-4 border-purple-500">
+                                <div class="flex items-start space-x-3">
+                                    <i class="fas fa-target text-purple-500 mt-1"></i>
+                                    <div>
+                                        <h4 class="font-medium text-gray-900 mb-1">Goal Achievement</h4>
+                                        <p class="text-sm text-gray-700" data-mock="true">At your current pace, you'll complete your React course 3 days ahead of schedule!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: InsightsSection -->
+                </div>
+            </main>
+            <!-- @END_COMPONENT: DashboardContent -->
+        </div>
+        <!-- @END_COMPONENT: MainContent -->
+    </div>
+    <!-- @END_COMPONENT: AppLayout -->
+
+    <!-- Mobile Navigation Overlay -->
+    <!-- @STATE: isMobileMenuOpen:boolean = false -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 lg:hidden hidden" id="mobileOverlay" data-implementation="Show/hide based on mobile menu state">
+        <div class="fixed inset-y-0 left-0 w-64 bg-surface">
+            <!-- Mobile navigation content - same as desktop sidebar -->
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Initialize Progress Chart
+            const progressCtx = document.getElementById('progressChart').getContext('2d');
+            new Chart(progressCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [
+                        {
+                            label: 'Focus Time (hours)',
+                            data: [3.5, 4.2, 2.8, 5.1, 4.8, 3.2, 4.5],
+                            borderColor: '#1976D2',
+                            backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'Habits Completed (%)',
+                            data: [75, 85, 60, 90, 80, 70, 78],
+                            borderColor: '#388E3C',
+                            backgroundColor: 'rgba(56, 142, 60, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#F3F4F6'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            // TODO: Implement timer functionality
+            // TODO: Implement habit tracking logic
+            // TODO: Implement data export functionality
+            // TODO: Implement real-time updates
+            // TODO: Implement notification system
+            // TODO: Implement goal management
+            // TODO: Implement insights generation
+        })();
+    </script>
+</body>
+</html>

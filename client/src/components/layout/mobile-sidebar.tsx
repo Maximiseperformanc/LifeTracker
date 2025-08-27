@@ -9,7 +9,9 @@ import {
   Calendar, 
   BarChart3,
   TrendingUp,
-  Apple
+  Apple,
+  Dumbbell,
+  Moon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +20,8 @@ const navigation = [
   { name: "Timer", href: "/timer", icon: Clock },
   { name: "Habits", href: "/habits", icon: CheckSquare },
   { name: "Health", href: "/health", icon: Heart },
+  { name: "Gym", href: "/gym", icon: Dumbbell },
+  { name: "Sleep", href: "/sleep", icon: Moon },
   { name: "Nutrition", href: "/nutrition", icon: Apple },
   { name: "Goals", href: "/goals", icon: Target },
   { name: "Calendar", href: "/calendar", icon: Calendar },
