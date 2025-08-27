@@ -241,6 +241,9 @@ export class MemStorage implements IStorage {
     
     // Seed todo categories
     this.seedTodoCategories();
+    
+    // Seed sample todos
+    this.seedTodos();
   }
 
   // Users
@@ -1032,6 +1035,182 @@ export class MemStorage implements IStorage {
         createdAt: new Date()
       };
       this.todoCategories.set(id, todoCategory);
+    });
+  }
+
+  private seedTodos() {
+    const categories = Array.from(this.todoCategories.values());
+    if (categories.length === 0) return;
+
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+    // Sample todos demonstrating all Eisenhower Matrix quadrants
+    const sampleTodos = [
+      // Quadrant 1: Urgent & Important (Do First)
+      {
+        categoryId: categories.find(c => c.name === "Work")?.id || categories[0].id,
+        title: "Fix critical server bug",
+        description: "Production server is down, affecting all users",
+        isUrgent: true,
+        isImportant: true,
+        priorityScore: 5,
+        dueDate: formatDate(today),
+        estimatedMinutes: 60
+      },
+      {
+        categoryId: categories.find(c => c.name === "Health")?.id || categories[2].id,
+        title: "Emergency dentist appointment",
+        description: "Severe toothache needs immediate attention",
+        isUrgent: true,
+        isImportant: true,
+        priorityScore: 4,
+        dueDate: formatDate(today),
+        estimatedMinutes: 120
+      },
+      {
+        categoryId: categories.find(c => c.name === "Finance")?.id || categories[4].id,
+        title: "Pay overdue credit card bill",
+        description: "Payment is 3 days overdue, avoid late fees",
+        isUrgent: true,
+        isImportant: true,
+        priorityScore: 4,
+        dueDate: formatDate(yesterday),
+        estimatedMinutes: 15
+      },
+
+      // Quadrant 2: Not Urgent & Important (Schedule)
+      {
+        categoryId: categories.find(c => c.name === "Learning")?.id || categories[3].id,
+        title: "Learn new programming framework",
+        description: "Research and practice React Native for upcoming project",
+        isUrgent: false,
+        isImportant: true,
+        priorityScore: 4,
+        dueDate: formatDate(nextWeek),
+        estimatedMinutes: 240
+      },
+      {
+        categoryId: categories.find(c => c.name === "Health")?.id || categories[2].id,
+        title: "Schedule annual health checkup",
+        description: "Book appointment with primary care doctor",
+        isUrgent: false,
+        isImportant: true,
+        priorityScore: 3,
+        estimatedMinutes: 30
+      },
+      {
+        categoryId: categories.find(c => c.name === "Personal")?.id || categories[1].id,
+        title: "Plan family vacation",
+        description: "Research destinations and book flights for summer trip",
+        isUrgent: false,
+        isImportant: true,
+        priorityScore: 3,
+        estimatedMinutes: 180
+      },
+      {
+        categoryId: categories.find(c => c.name === "Finance")?.id || categories[4].id,
+        title: "Review investment portfolio",
+        description: "Analyze performance and rebalance investments",
+        isUrgent: false,
+        isImportant: true,
+        priorityScore: 5,
+        estimatedMinutes: 90
+      },
+
+      // Quadrant 3: Urgent & Not Important (Delegate)
+      {
+        categoryId: categories.find(c => c.name === "Work")?.id || categories[0].id,
+        title: "Respond to non-critical emails",
+        description: "Reply to various meeting invitations and updates",
+        isUrgent: true,
+        isImportant: false,
+        priorityScore: 2,
+        dueDate: formatDate(today),
+        estimatedMinutes: 45
+      },
+      {
+        categoryId: categories.find(c => c.name === "Personal")?.id || categories[1].id,
+        title: "Pick up dry cleaning",
+        description: "Collect shirts before store closes today",
+        isUrgent: true,
+        isImportant: false,
+        priorityScore: 1,
+        dueDate: formatDate(today),
+        estimatedMinutes: 20
+      },
+      {
+        categoryId: categories.find(c => c.name === "Shopping")?.id || categories[6].id,
+        title: "Buy groceries for dinner",
+        description: "Need ingredients for tonight's dinner party",
+        isUrgent: true,
+        isImportant: false,
+        priorityScore: 3,
+        dueDate: formatDate(today),
+        estimatedMinutes: 60
+      },
+
+      // Quadrant 4: Not Urgent & Not Important (Eliminate)
+      {
+        categoryId: categories.find(c => c.name === "Personal")?.id || categories[1].id,
+        title: "Organize old photos",
+        description: "Sort through digital photo collection from 2019",
+        isUrgent: false,
+        isImportant: false,
+        priorityScore: 1,
+        estimatedMinutes: 120
+      },
+      {
+        categoryId: categories.find(c => c.name === "Social")?.id || categories[7].id,
+        title: "Check social media updates",
+        description: "Browse Instagram and Facebook feeds",
+        isUrgent: false,
+        isImportant: false,
+        priorityScore: 1,
+        estimatedMinutes: 30
+      },
+      {
+        categoryId: categories.find(c => c.name === "Personal")?.id || categories[1].id,
+        title: "Watch random YouTube videos",
+        description: "Browse trending videos and entertainment content",
+        isUrgent: false,
+        isImportant: false,
+        priorityScore: 1,
+        estimatedMinutes: 60
+      }
+    ];
+
+    sampleTodos.forEach((todoData, index) => {
+      const id = randomUUID();
+      const todo: Todo = {
+        id,
+        userId: "default-user",
+        categoryId: todoData.categoryId,
+        title: todoData.title,
+        description: todoData.description || null,
+        priority: "medium",
+        status: "pending",
+        isUrgent: todoData.isUrgent,
+        isImportant: todoData.isImportant,
+        priorityScore: todoData.priorityScore,
+        dueDate: todoData.dueDate || null,
+        dueTime: null,
+        estimatedMinutes: todoData.estimatedMinutes || null,
+        tags: null,
+        dependencies: null,
+        notes: null,
+        completedAt: null,
+        orderIndex: index,
+        createdAt: new Date()
+      };
+      this.todos.set(id, todo);
     });
   }
 
