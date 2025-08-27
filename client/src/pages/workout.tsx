@@ -23,7 +23,9 @@ import {
   ChevronRight,
   Activity
 } from "lucide-react";
-import { Sidebar } from "@/components/layout/unified-sidebar";
+import Sidebar from "@/components/layout/sidebar";
+import MobileSidebar from "@/components/layout/mobile-sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { Exercise, Workout, Set, CardioEntry } from "@shared/schema";
 
 interface WorkoutWithSets extends Workout {
@@ -46,6 +48,7 @@ export default function WorkoutPage() {
   const [newReps, setNewReps] = useState<string>("10");
   const [useKg, setUseKg] = useState(true);
   const [selectedWorkout, setSelectedWorkout] = useState<string | null>(null);
+  const isMobile = useIsMobile();
   
   // Cardio form states
   const [cardioType, setCardioType] = useState("run");

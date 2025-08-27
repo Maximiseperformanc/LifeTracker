@@ -21,9 +21,12 @@ import {
   Target,
   TrendingUp,
   FileDown,
-  Settings
+  Settings,
+  Menu
 } from "lucide-react";
-import { Sidebar } from "@/components/layout/unified-sidebar";
+import Sidebar from "@/components/layout/sidebar";
+import MobileSidebar from "@/components/layout/mobile-sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { FoodItem, MealEntry, NutritionGoal } from "@shared/schema";
 
 const MEAL_TYPES = [
@@ -58,6 +61,7 @@ export default function NutritionPage() {
   const [servingSize, setServingSize] = useState(1);
   const [selectedServing, setSelectedServing] = useState<string>("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -212,15 +216,44 @@ export default function NutritionPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex">
-        <Sidebar 
-          mobileMenuOpen={mobileMenuOpen} 
-          setMobileMenuOpen={setMobileMenuOpen}
-          currentPage="/nutrition"
+    <div className="flex h-screen bg-background">
+      {/* Desktop Sidebar */}
+      {!isMobile && <Sidebar />}
+
+      {/* Mobile Sidebar */}
+      {isMobile && (
+        <MobileSidebar 
+          open={mobileMenuOpen} 
+          onOpenChange={setMobileMenuOpen} 
         />
-        
-        <main className="flex-1 p-6 lg:ml-64">
+      )}
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="bg-surface border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setMobileMenuOpen(true)}
+                  data-testid="button-mobile-menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              )}
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Nutrition</h2>
+                <p className="text-gray-600">Track your meals and nutrition goals</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <div className="flex-1 overflow-auto p-6">
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-8">
               <div>
@@ -589,7 +622,7 @@ export default function NutritionPage() {
               </TabsContent>
             </Tabs>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );

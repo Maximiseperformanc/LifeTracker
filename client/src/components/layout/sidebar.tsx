@@ -14,12 +14,14 @@ import { cn } from "@/lib/utils";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
+  { name: "To Do", href: "/todos", icon: CheckSquare },
+  { name: "Calendar", href: "/calendar", icon: Calendar },
+  { name: "Systems", href: "/systems", icon: TrendingUp },
   { name: "Timer", href: "/timer", icon: Clock },
   { name: "Habits", href: "/habits", icon: CheckSquare },
   { name: "Health", href: "/health", icon: Heart },
   { name: "Nutrition", href: "/nutrition", icon: Apple },
   { name: "Goals", href: "/goals", icon: Target },
-  { name: "Calendar", href: "/calendar", icon: Calendar },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
 
