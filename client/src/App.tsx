@@ -10,6 +10,8 @@ import CalendarPage from "@/pages/calendar";
 import SystemsPage from "@/pages/systems";
 import HabitsPage from "@/pages/habits";
 import HealthPage from "@/pages/health";
+import GymPage from "@/pages/gym";
+import SleepPage from "@/pages/sleep";
 import NutritionPage from "@/pages/nutrition";
 import WorkoutPage from "@/pages/workout";
 import GoalsPage from "@/pages/goals";
@@ -30,6 +32,8 @@ function Router() {
       <Route path="/systems" component={SystemsPage} />
       <Route path="/habits" component={HabitsPage} />
       <Route path="/health" component={HealthPage} />
+      <Route path="/gym" component={GymPage} />
+      <Route path="/sleep" component={SleepPage} />
       <Route path="/nutrition" component={NutritionPage} />
       <Route path="/workout" component={WorkoutPage} />
       <Route path="/goals" component={GoalsPage} />

@@ -13,7 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { 
   Plus, Check, Clock, Flame, Calendar, Target, ChevronRight, BarChart3, 
   Activity, Heart, TrendingUp, Star, CheckCircle, Play, Pause, RotateCcw,
-  Moon, Zap, Utensils, Trophy, Brain, Timer, Dumbbell, Apple
+  Moon, Zap, Utensils, Trophy, Brain, Timer, Dumbbell, Apple, Bed
 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -476,7 +476,7 @@ export default function SystemsPage() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="habits" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="habits" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             Habits
@@ -485,9 +485,13 @@ export default function SystemsPage() {
             <Timer className="h-4 w-4" />
             Timer
           </TabsTrigger>
-          <TabsTrigger value="health" className="flex items-center gap-2">
-            <Heart className="h-4 w-4" />
-            Health
+          <TabsTrigger value="gym" className="flex items-center gap-2">
+            <Dumbbell className="h-4 w-4" />
+            Gym
+          </TabsTrigger>
+          <TabsTrigger value="sleep" className="flex items-center gap-2">
+            <Moon className="h-4 w-4" />
+            Sleep
           </TabsTrigger>
           <TabsTrigger value="nutrition" className="flex items-center gap-2">
             <Apple className="h-4 w-4" />
@@ -677,149 +681,215 @@ export default function SystemsPage() {
           </Card>
         </TabsContent>
 
-        {/* Health Tab */}
-        <TabsContent value="health" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Heart className="h-5 w-5" />
-                  Today's Health
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <Moon className="h-6 w-6 mx-auto mb-1 text-blue-600" />
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Sleep</p>
-                    <p className="font-bold">{todayHealth?.sleepHours || "—"}h</p>
-                  </div>
-                  <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                    <Dumbbell className="h-6 w-6 mx-auto mb-1 text-green-600" />
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Exercise</p>
-                    <p className="font-bold">{todayHealth?.exerciseMinutes || 0}m</p>
-                  </div>
+        {/* Gym Tab */}
+        <TabsContent value="gym" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Dumbbell className="h-5 w-5" />
+                Quick Gym Log
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <Dumbbell className="h-6 w-6 mx-auto mb-1 text-green-600" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Today's Workout</p>
+                  <p className="font-bold">{todayHealth?.exerciseMinutes || 0}m</p>
                 </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Sleep Quality</span>
-                    <span className="font-medium">{todayHealth?.sleepQuality || "—"}/10</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Mood</span>
-                    <span className="font-medium">{todayHealth?.mood || "—"}/10</span>
-                  </div>
+                <div className="text-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                  <Zap className="h-6 w-6 mx-auto mb-1 text-yellow-600" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Calories</p>
+                  <p className="font-bold">{todayHealth?.caloriesBurned || 0}</p>
                 </div>
+              </div>
 
-                <Dialog open={showHealthDialog} onOpenChange={setShowHealthDialog}>
-                  <DialogTrigger asChild>
-                    <Button className="w-full" data-testid="button-log-health">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Log Health Data
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Exercise Type</span>
+                  <span className="font-medium capitalize">{todayHealth?.exerciseType || "—"}</span>
+                </div>
+              </div>
+
+              <Dialog open={showHealthDialog} onOpenChange={setShowHealthDialog}>
+                <DialogTrigger asChild>
+                  <Button className="w-full" data-testid="button-log-gym">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Log Workout
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Quick Gym Log</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSaveHealth} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Exercise Duration (minutes)</label>
+                      <Input
+                        type="number"
+                        value={exerciseMinutes}
+                        onChange={(e) => setExerciseMinutes(Number(e.target.value))}
+                        data-testid="input-exercise-minutes"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Exercise Type</label>
+                      <Input
+                        value={exerciseType}
+                        onChange={(e) => setExerciseType(e.target.value)}
+                        placeholder="Strength, cardio, HIIT..."
+                        data-testid="input-exercise-type"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Notes</label>
+                      <Textarea
+                        value={healthNotes}
+                        onChange={(e) => setHealthNotes(e.target.value)}
+                        placeholder="Exercises performed, how you felt..."
+                        data-testid="textarea-gym-notes"
+                      />
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      disabled={saveHealthMutation.isPending}
+                      data-testid="button-save-gym"
+                    >
+                      {saveHealthMutation.isPending ? "Saving..." : "Save Workout"}
                     </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Log Health Data</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleSaveHealth} className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium mb-2">Sleep Hours</label>
-                          <Input
-                            type="number"
-                            step="0.5"
-                            value={sleepHours}
-                            onChange={(e) => setSleepHours(Number(e.target.value))}
-                            data-testid="input-sleep-hours"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-2">Exercise (minutes)</label>
-                          <Input
-                            type="number"
-                            value={exerciseMinutes}
-                            onChange={(e) => setExerciseMinutes(Number(e.target.value))}
-                            data-testid="input-exercise-minutes"
-                          />
-                        </div>
-                      </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
 
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Exercise Type</label>
-                        <Input
-                          value={exerciseType}
-                          onChange={(e) => setExerciseType(e.target.value)}
-                          placeholder="Running, weightlifting, yoga..."
-                          data-testid="input-exercise-type"
-                        />
-                      </div>
+              <div className="text-center pt-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  Want more detailed tracking?
+                </p>
+                <Button variant="outline" size="sm" onClick={() => window.location.href = '/gym'}>
+                  Go to Full Gym Tracker →
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Sleep Quality: {sleepQuality[0]}/10
-                        </label>
-                        <Slider
-                          value={sleepQuality}
-                          onValueChange={setSleepQuality}
-                          max={10}
-                          min={1}
-                          step={1}
-                          data-testid="slider-sleep-quality"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Mood: {mood[0]}/10
-                        </label>
-                        <Slider
-                          value={mood}
-                          onValueChange={setMood}
-                          max={10}
-                          min={1}
-                          step={1}
-                          data-testid="slider-mood"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2">Notes</label>
-                        <Textarea
-                          value={healthNotes}
-                          onChange={(e) => setHealthNotes(e.target.value)}
-                          placeholder="How are you feeling today?"
-                          data-testid="textarea-health-notes"
-                        />
-                      </div>
-
-                      <Button 
-                        type="submit" 
-                        className="w-full"
-                        disabled={saveHealthMutation.isPending}
-                        data-testid="button-save-health"
-                      >
-                        {saveHealthMutation.isPending ? "Saving..." : "Save Health Data"}
-                      </Button>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Health Trends</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <BarChart3 className="h-12 w-12 mx-auto text-gray-400 mb-2" />
-                  <p className="text-gray-600 dark:text-gray-400">Health analytics coming soon</p>
+        {/* Sleep Tab */}
+        <TabsContent value="sleep" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Moon className="h-5 w-5" />
+                Quick Sleep Log
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <Moon className="h-6 w-6 mx-auto mb-1 text-blue-600" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Last Night</p>
+                  <p className="font-bold">{todayHealth?.sleepHours || "—"}h</p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <Star className="h-6 w-6 mx-auto mb-1 text-purple-600" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Quality</p>
+                  <p className="font-bold">{todayHealth?.sleepQuality || "—"}/10</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Mood Today</span>
+                  <span className="font-medium">{todayHealth?.mood || "—"}/10</span>
+                </div>
+              </div>
+
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="w-full" data-testid="button-log-sleep">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Log Sleep
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Quick Sleep Log</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSaveHealth} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Sleep Hours</label>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        value={sleepHours}
+                        onChange={(e) => setSleepHours(Number(e.target.value))}
+                        data-testid="input-sleep-hours"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Sleep Quality: {sleepQuality[0]}/10
+                      </label>
+                      <Slider
+                        value={sleepQuality}
+                        onValueChange={setSleepQuality}
+                        max={10}
+                        min={1}
+                        step={1}
+                        data-testid="slider-sleep-quality"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Mood: {mood[0]}/10
+                      </label>
+                      <Slider
+                        value={mood}
+                        onValueChange={setMood}
+                        max={10}
+                        min={1}
+                        step={1}
+                        data-testid="slider-mood"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Notes</label>
+                      <Textarea
+                        value={healthNotes}
+                        onChange={(e) => setHealthNotes(e.target.value)}
+                        placeholder="Sleep quality, dreams, how you feel..."
+                        data-testid="textarea-sleep-notes"
+                      />
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full"
+                      disabled={saveHealthMutation.isPending}
+                      data-testid="button-save-sleep"
+                    >
+                      {saveHealthMutation.isPending ? "Saving..." : "Save Sleep Data"}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              <div className="text-center pt-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  Want detailed sleep analytics?
+                </p>
+                <Button variant="outline" size="sm" onClick={() => window.location.href = '/sleep'}>
+                  Go to Full Sleep Tracker →
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Nutrition Tab */}
