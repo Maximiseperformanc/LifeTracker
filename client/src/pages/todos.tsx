@@ -689,34 +689,34 @@ export default function TodoPage() {
       <div className="space-y-4">
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Eisenhower Matrix</h2>
         <div className="grid gap-4 lg:grid-cols-2">
-          {/* Quadrant 1: Urgent & Important (Do First) */}
+          {/* Quadrant 1: Urgent & Important */}
           {renderQuadrant(
             urgentImportant,
-            "Do First",
+            "Urgent and Important",
             <Flame className="h-5 w-5 text-red-600" />,
             "Crisis situations and urgent deadlines"
           )}
 
-          {/* Quadrant 2: Not Urgent & Important (Schedule) */}
+          {/* Quadrant 2: Not Urgent & Important */}
           {renderQuadrant(
             notUrgentImportant,
-            "Schedule",
+            "Not Urgent and Important",
             <Calendar className="h-5 w-5 text-blue-600" />,
             "Important goals and planning activities"
           )}
 
-          {/* Quadrant 3: Urgent & Not Important (Delegate) */}
+          {/* Quadrant 3: Urgent & Not Important */}
           {renderQuadrant(
             urgentNotImportant,
-            "Delegate",
+            "Urgent and Not Important",
             <ArrowRight className="h-5 w-5 text-orange-600" />,
             "Interruptions and some meetings"
           )}
 
-          {/* Quadrant 4: Not Urgent & Not Important (Eliminate) */}
+          {/* Quadrant 4: Not Urgent & Not Important */}
           {renderQuadrant(
             notUrgentNotImportant,
-            "Eliminate",
+            "Not Urgent and Not Important",
             <XCircle className="h-5 w-5 text-gray-600" />,
             "Time wasters and excessive entertainment"
           )}
@@ -724,66 +724,134 @@ export default function TodoPage() {
       </div>
 
       {/* Categories Section */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Categories</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {categories.map((category) => {
-            const categoryTodos = filteredTodos.filter(todo => todo.categoryId === category.id);
-            const completedInCategory = categoryTodos.filter(todo => todo.status === "completed").length;
-            const pendingInCategory = categoryTodos.filter(todo => todo.status !== "completed").length;
-            
-            return (
-              <Card key={category.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <span style={{ color: category.color || '#3B82F6' }}>{category.icon}</span>
-                      {category.name}
-                    </CardTitle>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteCategoryMutation.mutate(category.id)}
-                      data-testid={`button-delete-category-${category.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  {category.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">{category.description}</p>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                      <div className="font-semibold text-gray-900 dark:text-white">{pendingInCategory}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">Pending</div>
-                    </div>
-                    <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded">
-                      <div className="font-semibold text-green-600">{completedInCategory}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">Completed</div>
-                    </div>
-                  </div>
-                  
-                  {pendingInCategory > 0 && (
-                    <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {categoryTodos
-                        .filter(todo => todo.status !== "completed")
-                        .slice(0, 5)
-                        .map(renderTodoCard)
-                      }
-                      {pendingInCategory > 5 && (
-                        <p className="text-xs text-gray-500 text-center py-2">
-                          +{pendingInCategory - 5} more tasks
-                        </p>
+        {categories.map((category) => {
+          const categoryTodos = filteredTodos.filter(todo => todo.categoryId === category.id);
+          const completedInCategory = categoryTodos.filter(todo => todo.status === "completed").length;
+          const pendingInCategory = categoryTodos.filter(todo => todo.status !== "completed").length;
+          
+          // Category Eisenhower Matrix quadrants
+          const categoryUrgentImportant = categoryTodos.filter(todo => todo.isUrgent && todo.isImportant && todo.status !== "completed");
+          const categoryNotUrgentImportant = categoryTodos.filter(todo => !todo.isUrgent && todo.isImportant && todo.status !== "completed");
+          const categoryUrgentNotImportant = categoryTodos.filter(todo => todo.isUrgent && !todo.isImportant && todo.status !== "completed");
+          const categoryNotUrgentNotImportant = categoryTodos.filter(todo => !todo.isUrgent && !todo.isImportant && todo.status !== "completed");
+
+          const renderCategoryQuadrant = (todos: Todo[], title: string, bgColor: string, textColor: string) => (
+            <div className={`${bgColor} rounded-lg p-3 min-h-[120px]`}>
+              <h4 className={`text-sm font-semibold ${textColor} mb-2`}>{title}</h4>
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                {sortTodosInQuadrant(todos).slice(0, 3).map((todo) => (
+                  <div key={todo.id} className="flex items-start gap-2 p-1.5 bg-white/60 dark:bg-black/20 rounded text-xs">
+                    <button onClick={() => handleToggleComplete(todo)} className="flex-shrink-0 mt-0.5">
+                      <Circle className="h-3 w-3 text-gray-400 hover:text-gray-600" />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium truncate">{todo.title}</span>
+                        {renderPriorityStars(todo.priorityScore || 3)}
+                      </div>
+                      {todo.dueDate && (
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {isToday(new Date(todo.dueDate)) ? "Today" :
+                           isTomorrow(new Date(todo.dueDate)) ? "Tomorrow" :
+                           format(new Date(todo.dueDate), "MMM dd")}
+                        </div>
                       )}
                     </div>
-                  )}
+                  </div>
+                ))}
+                {todos.length > 3 && (
+                  <div className="text-xs text-gray-500 text-center py-1">
+                    +{todos.length - 3} more
+                  </div>
+                )}
+                {todos.length === 0 && (
+                  <div className="text-xs text-gray-500 text-center py-4">
+                    No tasks
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+          
+          return (
+            <Card key={category.id} className="mb-6">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <span style={{ color: category.color || '#3B82F6' }}>{category.icon}</span>
+                    {category.name}
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteCategoryMutation.mutate(category.id)}
+                    data-testid={`button-delete-category-${category.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                {category.description && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{category.description}</p>
+                )}
+                
+                {/* Category Stats */}
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div className="text-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                    <div className="font-semibold text-gray-900 dark:text-white">{pendingInCategory}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Pending</div>
+                  </div>
+                  <div className="text-center p-2 bg-green-50 dark:bg-green-900/20 rounded">
+                    <div className="font-semibold text-green-600">{completedInCategory}</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">Completed</div>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              {pendingInCategory > 0 && (
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white">2×2 Priority Matrix</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Urgent & Important */}
+                      {renderCategoryQuadrant(
+                        categoryUrgentImportant,
+                        "Urgent and Important",
+                        "bg-red-50 dark:bg-red-900/20",
+                        "text-red-700 dark:text-red-300"
+                      )}
+                      
+                      {/* Not Urgent & Important */}
+                      {renderCategoryQuadrant(
+                        categoryNotUrgentImportant,
+                        "Not Urgent and Important",
+                        "bg-blue-50 dark:bg-blue-900/20",
+                        "text-blue-700 dark:text-blue-300"
+                      )}
+                      
+                      {/* Urgent & Not Important */}
+                      {renderCategoryQuadrant(
+                        categoryUrgentNotImportant,
+                        "Urgent and Not Important",
+                        "bg-orange-50 dark:bg-orange-900/20",
+                        "text-orange-700 dark:text-orange-300"
+                      )}
+                      
+                      {/* Not Urgent & Not Important */}
+                      {renderCategoryQuadrant(
+                        categoryNotUrgentNotImportant,
+                        "Not Urgent and Not Important",
+                        "bg-gray-50 dark:bg-gray-800",
+                        "text-gray-700 dark:text-gray-300"
+                      )}
+                    </div>
+                  </div>
                 </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+              )}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
