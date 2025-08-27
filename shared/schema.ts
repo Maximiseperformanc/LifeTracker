@@ -416,6 +416,10 @@ export const todos = pgTable("todos", {
   description: text("description"),
   priority: text("priority").notNull().default("medium"), // low, medium, high, urgent
   status: text("status").notNull().default("pending"), // pending, in_progress, completed, cancelled
+  // Eisenhower Matrix fields
+  isUrgent: boolean("is_urgent").default(false),
+  isImportant: boolean("is_important").default(false),
+  priorityScore: integer("priority_score").default(3), // 1-5 scale within each Eisenhower quadrant
   dueDate: text("due_date"), // YYYY-MM-DD format
   dueTime: text("due_time"), // HH:MM format
   estimatedMinutes: integer("estimated_minutes"),
