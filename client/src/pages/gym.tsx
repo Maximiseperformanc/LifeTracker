@@ -16,7 +16,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { HealthEntry } from "@shared/schema";
 
 export default function GymPage() {
   const [showGymDialog, setShowGymDialog] = useState(false);
@@ -31,7 +30,7 @@ export default function GymPage() {
   const today = format(new Date(), "yyyy-MM-dd");
 
   // Fetch health entries
-  const { data: healthEntries = [] } = useQuery<HealthEntry[]>({
+  const { data: healthEntries = [] } = useQuery({
     queryKey: ["/api/health-entries"],
   });
 
